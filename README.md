@@ -50,6 +50,14 @@ Add that directory to `load-path` before requiring `beads`. Override the
 destination with `make install PREFIX=/another/prefix` or `make install
 INSTALL_DIR=/exact/directory`.
 
+For the default installed directory:
+
+```emacs-lisp
+(use-package beads
+  :load-path "~/.emacs.d/site-lisp/beads"
+  :commands (beads bv beads-menu beads-ready beads-triage))
+```
+
 ## Getting started
 
 1. Visit any file inside a repository containing `.beads` or `_beads`.
