@@ -62,12 +62,10 @@ install-dev-dependencies: check-emacs
 	$(EMACS) --batch -Q \
 		--eval '(setq package-user-dir "$(PACKAGE_USER_DIR)")' \
 		--eval '(require (quote package))' \
-		--eval '(add-to-list (quote package-archives) \
-			(quote ("melpa" . "https://melpa.org/packages/")) t)' \
+		--eval '(add-to-list (quote package-archives) (quote ("melpa" . "https://melpa.org/packages/")) t)' \
 		--eval '(package-initialize)' \
 		--eval '(unless package-archive-contents (package-refresh-contents))' \
-		--eval '(unless (package-installed-p (quote package-lint)) \
-			(package-install (quote package-lint)))'
+		--eval '(unless (package-installed-p (quote package-lint)) (package-install (quote package-lint)))'
 
 check: checkdoc lint test
 
