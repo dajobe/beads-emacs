@@ -83,25 +83,28 @@
 (declare-function bv-update "bv-edit" (&optional id workspace))
 (declare-function bv-menu "bv-transient" ())
 
-(defvar bv-list-mode-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map tabulated-list-mode-map)
-    (define-key map (kbd "RET") #'bv-list-show)
-    (define-key map (kbd "g") #'bv-list-refresh)
-    (define-key map (kbd "a") #'bv-list-all)
-    (define-key map (kbd "o") #'bv-list-open)
-    (define-key map (kbd "c") #'bv-list-closed)
-    (define-key map (kbd "r") #'bv-list-ready)
-    (define-key map (kbd "b") #'bv-list-blocked)
-    (define-key map (kbd "l") #'bv-list-label)
-    (define-key map (kbd "/") #'bv-list-search)
-    (define-key map (kbd "C") #'bv-claim)
-    (define-key map (kbd "e") #'bv-update)
-    (define-key map (kbd "x") #'bv-close)
-    (define-key map (kbd "R") #'bv-reopen)
-    (define-key map (kbd "?") #'bv-menu)
-    map)
+(defvar bv-list-mode-map (make-sparse-keymap)
   "Keymap for `bv-list-mode'.")
+
+;; Define bindings outside `defvar' so reloading this library updates an
+;; existing list-mode map as well as a newly created one.
+(set-keymap-parent bv-list-mode-map tabulated-list-mode-map)
+(define-key bv-list-mode-map (kbd "RET") #'bv-list-show)
+(define-key bv-list-mode-map (kbd "g") #'bv-list-refresh)
+(define-key bv-list-mode-map (kbd "a") #'bv-list-all)
+(define-key bv-list-mode-map (kbd "o") #'bv-list-open)
+(define-key bv-list-mode-map (kbd "O") #'bv-list-open)
+(define-key bv-list-mode-map (kbd "X") #'bv-list-closed)
+(define-key bv-list-mode-map (kbd "r") #'bv-list-ready)
+(define-key bv-list-mode-map (kbd "b") #'bv-list-blocked)
+(define-key bv-list-mode-map (kbd "l") #'bv-list-label)
+(define-key bv-list-mode-map (kbd "/") #'bv-list-search)
+(define-key bv-list-mode-map (kbd "c") #'bv-create)
+(define-key bv-list-mode-map (kbd "C") #'bv-claim)
+(define-key bv-list-mode-map (kbd "e") #'bv-update)
+(define-key bv-list-mode-map (kbd "x") #'bv-close)
+(define-key bv-list-mode-map (kbd "R") #'bv-reopen)
+(define-key bv-list-mode-map (kbd "?") #'bv-menu)
 
 (easy-menu-define bv-list-mode-menu bv-list-mode-map
   "Menu for Beads issue lists."

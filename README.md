@@ -93,8 +93,10 @@ their corresponding `bv-list-*` commands. `bv-transient` is an alias for
 List and detail buffers display their available bindings through `C-h m`. Common
 navigation follows normal Emacs conventions: `RET` visits the issue at point,
 `g` refreshes the current view, and `q` quits the window. In a list buffer, `a`,
-`o`, `c`, `r`, and `b` switch the same buffer to All, Open, Closed, Ready, and
-Blocked respectively. `l` filters by label and `/` searches in place.
+`O`, `X`, `r`, and `b` switch the same buffer to All, Open, Closed, Ready, and
+Blocked respectively. Lowercase `o` is also an Open alias, `c` creates an issue,
+`l` filters by label, and `/` searches in place. The popup and direct list
+bindings use the same `O`, `X`, and `c` shortcuts.
 
 ## Customization
 
