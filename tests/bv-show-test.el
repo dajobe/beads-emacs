@@ -42,6 +42,13 @@
         (should-not bv-show--busy)
         (should (string-match-p "Main issue" (buffer-string)))))))
 
+(ert-deftest bv-show-mode-enables-visual-word-wrapping ()
+  (with-temp-buffer
+    (bv-show-mode)
+    (should visual-line-mode)
+    (should word-wrap)
+    (should-not truncate-lines)))
+
 (ert-deftest bv-show-render-includes-details-relations-comments-and-faces ()
   (with-temp-buffer
     (bv-show-mode)
@@ -126,6 +133,69 @@
   (with-temp-buffer
     (should-error (bv-show-refresh) :type 'user-error))
   (should-error (bv-show "") :type 'user-error))
+
+(ert-deftest bv-show-issue-candidates-use-all-issues-and-display-titles ()
+  (let (captured)
+    (cl-letf (((symbol-function 'bv-br-sync)
+               (lambda (arguments workspace)
+                 (setq captured (list arguments workspace))
+                 (bv-test-json
+                  "{\"issues\":[{\"id\":\"bve-one\",\"title\":\"First issue\"},{\"id\":\"bve-two\",\"title\":\"\"}]}"))))
+      (should
+       (equal (bv-show--issue-candidates "/tmp/beads/")
+              '(("bve-one  First issue" . "bve-one")
+                ("bve-two" . "bve-two"))))
+      (should (equal captured
+                     '(("list" "--all" "--json") "/tmp/beads/"))))))
+
+(ert-deftest bv-show-read-id-requires-a-candidate-and-returns-its-id ()
+  (let (captured)
+    (cl-letf (((symbol-function 'bv-show--issue-candidates)
+               (lambda (_workspace)
+                 '(("bve-one  First issue" . "bve-one"))))
+              ((symbol-function 'completing-read)
+               (lambda (prompt collection predicate require-match
+                               &rest _ignored)
+                 (setq captured
+                       (list prompt collection predicate require-match))
+                 "bve-one  First issue")))
+      (should (equal (bv-show--read-id "/tmp/beads/") "bve-one"))
+      (should (equal captured
+                     '("Issue: "
+                       (("bve-one  First issue" . "bve-one")) nil t))))))
+
+(ert-deftest bv-show-read-id-rejects-a-workspace-without-issues ()
+  (cl-letf (((symbol-function 'bv-show--issue-candidates)
+             (lambda (_workspace) nil)))
+    (should-error (bv-show--read-id "/tmp/beads/") :type 'user-error)))
+
+(ert-deftest bv-show-interactive-completes-in-the-active-workspace ()
+  (let ((workspace "/tmp/beads/")
+        read-workspace
+        watched
+        opened-buffer)
+    (unwind-protect
+        (cl-letf (((symbol-function 'bv-workspace-root)
+                   (lambda (&optional _directory) workspace))
+                  ((symbol-function 'bv-show--read-id)
+                   (lambda (root)
+                     (setq read-workspace root)
+                     "bve-one"))
+                  ((symbol-function 'bv-show-refresh) #'ignore)
+                  ((symbol-function 'bv-watch-workspace)
+                   (lambda (function) (setq watched function)))
+                  ((symbol-function 'pop-to-buffer)
+                   (lambda (buffer &rest _ignored)
+                     (setq opened-buffer buffer))))
+          (let ((buffer (call-interactively #'bv-show)))
+            (should (eq buffer opened-buffer))
+            (should (equal read-workspace workspace))
+            (should (eq watched #'bv-show-refresh))
+            (with-current-buffer buffer
+              (should (equal bv-show-id "bve-one"))
+              (should (equal bv-workspace workspace)))))
+      (when (buffer-live-p opened-buffer)
+        (kill-buffer opened-buffer)))))
 
 (provide 'bv-show-test)
 

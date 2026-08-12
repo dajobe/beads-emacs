@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Added issue ID and title completion to interactive `bv-show` selection.
+- Added visual word wrapping to `bv-show` detail buffers.
+- Added debounced automatic refresh after external Beads JSONL changes.
 - Added the initial Emacs 29+ interface to `br` and `bv`.
 - Added asynchronous issue lists, issue details, triage, planning, and mutation
   workflows.

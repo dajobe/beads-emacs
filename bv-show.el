@@ -77,6 +77,9 @@
 
 (define-derived-mode bv-show-mode special-mode "Beads-Issue"
   "Major mode for a Beads issue detail buffer."
+  (setq-local truncate-lines nil
+              word-wrap t)
+  (visual-line-mode 1)
   (setq-local revert-buffer-function
               (lambda (&rest _ignored) (bv-show-refresh))))
 
@@ -250,10 +253,36 @@
   (format "*Beads %s: %s*"
           id (file-name-nondirectory (directory-file-name workspace))))
 
+(defun bv-show--issue-candidates (workspace)
+  "Return issue completion candidates from WORKSPACE.
+
+Each candidate displays an issue ID and title while retaining the ID as its
+value."
+  (mapcar
+   (lambda (issue)
+     (let ((id (bv-show--string (bv-object-get issue 'id)))
+           (title (bv-show--string (bv-object-get issue 'title))))
+       (cons (if (string-empty-p title)
+                 id
+               (format "%s  %s" id title))
+             id)))
+   (bv-json-issues
+    (bv-br-sync '("list" "--all" "--json") workspace))))
+
+(defun bv-show--read-id (workspace)
+  "Read an issue ID with completion from WORKSPACE."
+  (let ((candidates (bv-show--issue-candidates workspace)))
+    (unless candidates
+      (user-error "No Beads issues found in %s" workspace))
+    (let ((choice (completing-read "Issue: " candidates nil t)))
+      (or (cdr (assoc choice candidates)) choice))))
+
 ;;;###autoload
 (defun bv-show (id &optional workspace)
   "Display issue ID from WORKSPACE."
-  (interactive (list (read-string "Issue ID: ") nil))
+  (interactive
+   (let ((root (bv-workspace-root)))
+     (list (bv-show--read-id root) root)))
   (when (string-empty-p id)
     (user-error "Issue ID cannot be empty"))
   (let* ((root (bv-workspace-root workspace))
@@ -262,6 +291,7 @@
       (bv-show-mode)
       (setq-local bv-workspace root)
       (setq-local bv-show-id id)
+      (bv-watch-workspace #'bv-show-refresh)
       (bv-show-refresh))
     (pop-to-buffer buffer)
     buffer))

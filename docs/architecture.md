@@ -81,6 +81,14 @@ request; a newer refresh supersedes the older request, and stale sentinels may
 not update the buffer. A visible header or mode-line indicator shows active
 work. Killing a buffer stops its owned process.
 
+List, detail, and analysis buffers watch `issues.jsonl` or legacy `beads.jsonl`
+directly, falling back to the owning Beads data directory until the file exists.
+This works with notification backends such as macOS kqueue that do not report
+file-content changes through directory watches. Events are debounced and refresh
+only visible, idle buffers. A replaced file is watched again automatically.
+Killing or repurposing a buffer removes its watch and pending timer. When file
+notifications are unavailable, manual `g` refresh remains available.
+
 The core runner is replaceable in tests. Rendering and command construction
 remain pure enough for ERT tests to cover them without installed binaries.
 

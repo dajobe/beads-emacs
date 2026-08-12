@@ -17,6 +17,7 @@
 
 (require 'json)
 (require 'cl-lib)
+(require 'filenotify)
 (require 'map)
 (require 'seq)
 (require 'subr-x)
@@ -48,11 +49,22 @@ The path may be absolute or relative to the selected workspace."
   "Name of the buffer containing subprocess diagnostics."
   :type 'string)
 
+(defcustom bv-auto-refresh-on-change t
+  "Whether visible Beads buffers refresh after external JSONL changes."
+  :type 'boolean)
+
+(defcustom bv-auto-refresh-delay 0.25
+  "Seconds to debounce automatic refreshes after Beads JSONL changes."
+  :type 'number)
+
 (defvar-local bv-workspace nil
   "Workspace explicitly associated with the current buffer.")
 
 (defvar-local bv--active-process nil)
 (defvar-local bv--request-generation 0)
+(defvar-local bv--file-watch nil)
+(defvar-local bv--rewatch-needed nil)
+(defvar-local bv--auto-refresh-timer nil)
 
 (defvar bv-before-refresh-hook nil
   "Hook run in the target buffer before an asynchronous command starts.")
@@ -78,15 +90,120 @@ The path may be absolute or relative to the selected workspace."
 
 (defun bv-workspace-root (&optional directory)
   "Return the normalized Beads workspace root for DIRECTORY.
-Selection prefers buffer-local `bv-workspace', then
-`bv-default-workspace', and finally discovery above DIRECTORY or
-`default-directory'.  Signal `user-error' when no workspace can be found."
+Selection prefers buffer-local `bv-workspace', then DIRECTORY,
+`bv-default-workspace', and finally discovery above `default-directory'.
+Signal `user-error' when no workspace can be found."
   (let* ((selected (or bv-workspace directory bv-default-workspace
                        default-directory))
          (root (bv--marker-directory selected)))
     (unless root
       (user-error "No Beads workspace found from %s" selected))
     (file-name-as-directory (file-truename root))))
+
+(defun bv--beads-directory (workspace)
+  "Return the Beads data directory inside WORKSPACE, or nil."
+  (seq-find #'file-directory-p
+            (mapcar (lambda (name) (expand-file-name name workspace))
+                    '(".beads" "_beads"))))
+
+(defun bv--issues-watch-target (workspace)
+  "Return the best file notification target for WORKSPACE."
+  (when-let* ((directory (bv--beads-directory workspace)))
+    (or (seq-find #'file-exists-p
+                  (mapcar (lambda (name) (expand-file-name name directory))
+                          '("issues.jsonl" "beads.jsonl")))
+        directory)))
+
+(defun bv--jsonl-change-event-p (event)
+  "Return non-nil when file notification EVENT concerns issue JSONL."
+  (and (not (eq (cadr event) 'stopped))
+       (seq-some
+        (lambda (path)
+          (and (stringp path)
+               (member (file-name-nondirectory path)
+                       '("issues.jsonl" "beads.jsonl"))))
+        (cddr event))))
+
+(defun bv--auto-refresh-now (buffer refresh-function)
+  "Refresh BUFFER with REFRESH-FUNCTION when it is visible and idle."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (setq bv--auto-refresh-timer nil)
+      (when (and bv-auto-refresh-on-change bv--rewatch-needed)
+        (setq bv--rewatch-needed nil)
+        (let ((descriptor bv--file-watch))
+          (setq bv--file-watch nil)
+          (when descriptor
+            (ignore-errors (file-notify-rm-watch descriptor))))
+        (bv--add-workspace-watch buffer refresh-function))
+      (when (and bv-auto-refresh-on-change
+                 (get-buffer-window buffer t))
+        (if (process-live-p bv--active-process)
+            (bv--schedule-auto-refresh buffer refresh-function)
+          (funcall refresh-function))))))
+
+(defun bv--schedule-auto-refresh (buffer refresh-function)
+  "Schedule a debounced REFRESH-FUNCTION call for BUFFER."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (timerp bv--auto-refresh-timer)
+        (cancel-timer bv--auto-refresh-timer))
+      (setq bv--auto-refresh-timer
+            (run-at-time bv-auto-refresh-delay nil
+                         #'bv--auto-refresh-now buffer refresh-function)))))
+
+(defun bv--file-watch-callback (buffer refresh-function event)
+  "Handle Beads file notification EVENT for BUFFER.
+REFRESH-FUNCTION refreshes the owning UI buffer."
+  (when (buffer-live-p buffer)
+    (when (bv--jsonl-change-event-p event)
+      (bv--schedule-auto-refresh buffer refresh-function))
+    (when (and (memq (cadr event) '(created deleted renamed))
+               (with-current-buffer buffer
+                 (equal (car event) bv--file-watch)))
+      (with-current-buffer buffer
+        (setq bv--rewatch-needed t)
+        (unless (eq (cadr event) 'created)
+          (setq bv--file-watch nil))))))
+
+(defun bv--add-workspace-watch (buffer refresh-function)
+  "Add BUFFER's file watch and arrange to call REFRESH-FUNCTION later."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when-let* ((target (and bv-workspace
+                              (bv--issues-watch-target bv-workspace))))
+        (condition-case nil
+            (setq bv--file-watch
+                  (file-notify-add-watch
+                   target '(change attribute-change)
+                   (lambda (event)
+                     (bv--file-watch-callback
+                      buffer refresh-function event))))
+          ((file-notify-error file-error)
+           (setq bv--file-watch nil)))))))
+
+(defun bv-unwatch-workspace ()
+  "Remove file notification and refresh timer owned by this buffer."
+  (when (timerp bv--auto-refresh-timer)
+    (cancel-timer bv--auto-refresh-timer))
+  (setq bv--auto-refresh-timer nil)
+  (setq bv--rewatch-needed nil)
+  (let ((descriptor bv--file-watch))
+    (setq bv--file-watch nil)
+    (when descriptor
+      (ignore-errors (file-notify-rm-watch descriptor)))))
+
+(defun bv-watch-workspace (refresh-function)
+  "Watch the current workspace and call REFRESH-FUNCTION after JSONL writes.
+
+File notification failures are non-fatal because manual refresh remains
+available.  Return the watch descriptor, or nil when watching is unavailable."
+  (bv-unwatch-workspace)
+  (when bv-auto-refresh-on-change
+    (bv--add-workspace-watch (current-buffer) refresh-function))
+  (when bv--file-watch
+    (add-hook 'kill-buffer-hook #'bv-unwatch-workspace nil t))
+  bv--file-watch)
 
 (defun bv--normalize-json (value)
   "Normalize JSON VALUE recursively to lists and string-keyed alists."

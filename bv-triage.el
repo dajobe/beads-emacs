@@ -286,6 +286,7 @@
       (bv-triage-mode)
       (setq-local bv-workspace root)
       (setq-local bv-triage-kind kind)
+      (bv-watch-workspace #'bv-triage-refresh)
       (bv-triage-refresh))
     (pop-to-buffer buffer)
     buffer))

@@ -314,6 +314,7 @@ This wrapper makes the renderer convenient to exercise independently."
       (setq-local bv-list-query query)
       (setq-local revert-buffer-function
                   (lambda (&rest _ignored) (bv-list-refresh)))
+      (bv-watch-workspace #'bv-list-refresh)
       (bv-list-refresh))
     (pop-to-buffer buffer)
     buffer))

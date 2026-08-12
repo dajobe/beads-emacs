@@ -61,7 +61,8 @@ INSTALL_DIR=/exact/directory`.
 The package runs list, detail, and analysis reads asynchronously and preserves
 the selected issue when a view refreshes. Commands are scoped to the workspace
 shown in the buffer, so buffers from different repositories do not share
-results.
+results. Visible Beads buffers also watch the workspace JSONL export and
+automatically refresh after debounced external changes.
 
 ## Main commands
 
@@ -97,6 +98,9 @@ are:
   inside one.
 - `bv-database-file`: optional database passed to Beads commands.
 - `bv-error-buffer-name`: buffer used for retained command diagnostics.
+- `bv-auto-refresh-on-change`: whether visible Beads buffers watch for external
+  JSONL changes.
+- `bv-auto-refresh-delay`: debounce delay before an automatic refresh.
 
 For example:
 

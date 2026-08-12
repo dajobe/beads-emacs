@@ -136,6 +136,20 @@
   (with-temp-buffer
     (should-error (bv-list-refresh) :type 'user-error)))
 
+(ert-deftest bv-list-open-watches-its-workspace ()
+  (bv-test-with-workspace
+    (let (buffer watched)
+      (unwind-protect
+          (cl-letf (((symbol-function 'bv-watch-workspace)
+                     (lambda (function)
+                       (setq watched (list (current-buffer) function))))
+                    ((symbol-function 'bv-list-refresh) #'ignore)
+                    ((symbol-function 'pop-to-buffer) #'ignore))
+            (setq buffer (bv-list--open 'all root))
+            (should (equal watched (list buffer #'bv-list-refresh))))
+        (when (buffer-live-p buffer)
+          (kill-buffer buffer))))))
+
 (provide 'bv-list-test)
 
 ;;; bv-list-test.el ends here

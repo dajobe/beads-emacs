@@ -190,6 +190,20 @@
     (should-error (bv-triage-refresh) :type 'user-error)
     (should-error (bv-triage-render 'unknown nil))))
 
+(ert-deftest bv-triage-open-watches-its-workspace ()
+  (bv-test-with-workspace
+    (let (buffer watched)
+      (unwind-protect
+          (cl-letf (((symbol-function 'bv-watch-workspace)
+                     (lambda (function)
+                       (setq watched (list (current-buffer) function))))
+                    ((symbol-function 'bv-triage-refresh) #'ignore)
+                    ((symbol-function 'pop-to-buffer) #'ignore))
+            (setq buffer (bv-triage--open 'triage root))
+            (should (equal watched (list buffer #'bv-triage-refresh))))
+        (when (buffer-live-p buffer)
+          (kill-buffer buffer))))))
+
 (provide 'bv-triage-test)
 
 ;;; bv-triage-test.el ends here
