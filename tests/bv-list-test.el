@@ -10,6 +10,8 @@
   (with-temp-buffer
     (bv-list-mode)
     (dolist (case '((all . ("list" "--all" "--json"))
+                    (open . ("list" "--status" "open" "--json"))
+                    (closed . ("list" "--status" "closed" "--json"))
                     (ready . ("ready" "--json"))
                     (blocked . ("blocked" "--json"))))
       (setq bv-list-kind (car case))
@@ -18,6 +20,10 @@
           bv-list-query "quoted words")
     (should (equal (bv-list--args)
                    '("search" "quoted words" "--json")))
+    (setq bv-list-kind 'label
+          bv-list-query "frontend")
+    (should (equal (bv-list--args)
+                   '("list" "--all" "--label" "frontend" "--json")))
     (setq bv-list-kind 'unknown)
     (should-error (bv-list--args))))
 
@@ -39,7 +45,7 @@
        "\"status\":\"closed\",\"issue_type\":\"bug\"}]}")))
     (should (= (length bv-list-issues) 2))
     (should-not bv-list--busy)
-    (should (equal header-line-format "2 issues"))
+    (should (equal header-line-format "All — 2 issues"))
     (goto-char (point-min))
     (search-forward "P0")
     (should (eq (get-text-property (1- (point)) 'face)
@@ -63,7 +69,7 @@
      (current-buffer) 1
      (bv-test-json
       "[{\"id\":\"bve-ready\",\"title\":\"Do it\",\"priority\":2,\"status\":\"in_progress\",\"issue_type\":\"task\"}]"))
-    (should (equal header-line-format "1 issue"))
+    (should (equal header-line-format "Ready — 1 issue"))
     (goto-char (point-min))
     (search-forward "in progress")
     (should (eq (get-text-property (1- (point)) 'face)
@@ -149,6 +155,78 @@
             (should (equal watched (list buffer #'bv-list-refresh))))
         (when (buffer-live-p buffer)
           (kill-buffer buffer))))))
+
+(ert-deftest bv-list-filter-keys-match-bv-and-existing-views ()
+  (should (eq (lookup-key bv-list-mode-map (kbd "a")) #'bv-list-all))
+  (should (eq (lookup-key bv-list-mode-map (kbd "o")) #'bv-list-open))
+  (should (eq (lookup-key bv-list-mode-map (kbd "c")) #'bv-list-closed))
+  (should (eq (lookup-key bv-list-mode-map (kbd "r")) #'bv-list-ready))
+  (should (eq (lookup-key bv-list-mode-map (kbd "b")) #'bv-list-blocked))
+  (should (eq (lookup-key bv-list-mode-map (kbd "l")) #'bv-list-label))
+  (should (eq (lookup-key bv-list-mode-map (kbd "/")) #'bv-list-search))
+  (should (eq (lookup-key bv-list-mode-map (kbd "RET")) #'bv-list-show)))
+
+(ert-deftest bv-list-view-commands-switch-the-current-buffer-in-place ()
+  (let ((buffer (generate-new-buffer " *bv in-place list*"))
+        (refreshes 0))
+    (unwind-protect
+        (with-current-buffer buffer
+          (bv-list-mode)
+          (setq-local bv-workspace "/tmp/project/"
+                      bv-list-kind 'all
+                      bv-list-query "old")
+          (cl-letf (((symbol-function 'bv-list-refresh)
+                     (lambda () (cl-incf refreshes))))
+            (should (eq (bv-list-ready) buffer))
+            (should (eq (current-buffer) buffer))
+            (should (eq bv-list-kind 'ready))
+            (should-not bv-list-query)
+            (should (= refreshes 1))
+            (should (string-prefix-p "*Beads Ready: project*"
+                                     (buffer-name)))
+            (should (eq (bv-list-open) buffer))
+            (should (eq bv-list-kind 'open))
+            (should (= refreshes 2))))
+      (when (buffer-live-p buffer)
+        (kill-buffer buffer)))))
+
+(ert-deftest bv-list-search-and-label-switch-in-place-with-query ()
+  (let ((buffer (generate-new-buffer " *bv query list*")))
+    (unwind-protect
+        (with-current-buffer buffer
+          (bv-list-mode)
+          (setq-local bv-workspace "/tmp/project/")
+          (cl-letf (((symbol-function 'bv-list-refresh) #'ignore))
+            (should (eq (bv-list-search "quoted words") buffer))
+            (should (eq bv-list-kind 'search))
+            (should (equal bv-list-query "quoted words"))
+            (should (eq (bv-list-label "frontend") buffer))
+            (should (eq bv-list-kind 'label))
+            (should (equal bv-list-query "frontend"))))
+      (when (buffer-live-p buffer)
+        (kill-buffer buffer)))))
+
+(ert-deftest bv-list-view-command-opens-a-buffer-outside-list-mode ()
+  (with-temp-buffer
+    (let (captured)
+      (cl-letf (((symbol-function 'bv-list--open)
+                 (lambda (kind directory query)
+                   (setq captured (list kind directory query))
+                   'opened)))
+        (should (eq (bv-list-closed "/tmp/project/") 'opened))
+        (should (equal captured '(closed "/tmp/project/" nil)))))))
+
+(ert-deftest bv-list-known-labels-are-unique-and-sorted ()
+  (let (captured)
+    (cl-letf (((symbol-function 'bv-br-sync)
+               (lambda (arguments workspace)
+                 (setq captured (list arguments workspace))
+                 (bv-test-json
+                  "{\"issues\":[{\"labels\":[\"ui\",\"elisp\"]},{\"labels\":[\"ui\",\"tests\"]}]}"))))
+      (should (equal (bv-list--known-labels "/tmp/project/")
+                     '("elisp" "tests" "ui")))
+      (should (equal captured
+                     '(("list" "--all" "--json") "/tmp/project/"))))))
 
 (provide 'bv-list-test)
 

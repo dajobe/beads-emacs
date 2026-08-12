@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Added in-place All, Open, Closed, Ready, Blocked, label, and search list
+  filters matching the main `bv` filtering keys.
 - Added issue ID and title completion to interactive `bv-show` selection.
 - Added visual word wrapping to `bv-show` detail buffers.
 - Added debounced automatic refresh after external Beads JSONL changes.

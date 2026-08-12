@@ -5,7 +5,7 @@
 
 ;;; Commentary:
 
-;; Shared tabulated views for all, ready, blocked, and searched issues.
+;; Shared tabulated views and in-place filters for Beads issues.
 
 ;;; Code:
 
@@ -86,13 +86,14 @@
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map tabulated-list-mode-map)
     (define-key map (kbd "RET") #'bv-list-show)
-    (define-key map (kbd "o") #'bv-list-show)
     (define-key map (kbd "g") #'bv-list-refresh)
     (define-key map (kbd "a") #'bv-list-all)
+    (define-key map (kbd "o") #'bv-list-open)
+    (define-key map (kbd "c") #'bv-list-closed)
     (define-key map (kbd "r") #'bv-list-ready)
     (define-key map (kbd "b") #'bv-list-blocked)
+    (define-key map (kbd "l") #'bv-list-label)
     (define-key map (kbd "/") #'bv-list-search)
-    (define-key map (kbd "c") #'bv-create)
     (define-key map (kbd "C") #'bv-claim)
     (define-key map (kbd "e") #'bv-update)
     (define-key map (kbd "x") #'bv-close)
@@ -108,8 +109,11 @@
     ["Refresh" bv-list-refresh t]
     "---"
     ["All issues" bv-list-all t]
+    ["Open issues" bv-list-open t]
+    ["Closed issues" bv-list-closed t]
     ["Ready issues" bv-list-ready t]
     ["Blocked issues" bv-list-blocked t]
+    ["Filter by label..." bv-list-label t]
     ["Search..." bv-list-search t]
     "---"
     ["Create issue..." bv-create t]
@@ -237,12 +241,28 @@ This wrapper makes the renderer convenient to exercise independently."
           (file-name-nondirectory (directory-file-name workspace))
           (if query (format " — %s" query) "")))
 
+(defun bv-list--view-title ()
+  "Return a display title for the current list view."
+  (pcase bv-list-kind
+    ('all "All")
+    ('open "Open")
+    ('closed "Closed")
+    ('ready "Ready")
+    ('blocked "Blocked")
+    ('label (format "Label: %s" bv-list-query))
+    ('search (format "Search: %s" bv-list-query))
+    (_ (capitalize (symbol-name bv-list-kind)))))
+
 (defun bv-list--args ()
   "Return the `br' arguments for the current list view."
   (pcase bv-list-kind
     ('all '("list" "--all" "--json"))
+    ('open '("list" "--status" "open" "--json"))
+    ('closed '("list" "--status" "closed" "--json"))
     ('ready '("ready" "--json"))
     ('blocked '("blocked" "--json"))
+    ('label (list "list" "--all" "--label"
+                  (or bv-list-query "") "--json"))
     ('search (list "search" (or bv-list-query "") "--json"))
     (_ (error "Unknown Beads list kind: %S" bv-list-kind))))
 
@@ -273,7 +293,8 @@ This wrapper makes the renderer convenient to exercise independently."
         (tabulated-list-print t)
         (bv-list--restore-selection bv-list--selected-id)
         (setq header-line-format
-              (format "%s issue%s"
+              (format "%s — %s issue%s"
+                      (bv-list--view-title)
                       (length bv-list-issues)
                       (if (= (length bv-list-issues) 1) "" "s")))))))
 
@@ -319,35 +340,97 @@ This wrapper makes the renderer convenient to exercise independently."
     (pop-to-buffer buffer)
     buffer))
 
+(defun bv-list--switch (kind &optional query)
+  "Switch the current list buffer to KIND and optional QUERY."
+  (unless (derived-mode-p 'bv-list-mode)
+    (user-error "This is not a Beads issue-list buffer"))
+  (setq bv-list-kind kind
+        bv-list-query query)
+  (rename-buffer (bv-list--buffer-name kind bv-workspace query) t)
+  (bv-list-refresh)
+  (current-buffer))
+
+(defun bv-list--visit (kind &optional directory query)
+  "Switch to or open a KIND list in DIRECTORY with optional QUERY."
+  (if (and (derived-mode-p 'bv-list-mode)
+           (or (null directory)
+               (equal bv-workspace
+                      (let ((bv-workspace nil))
+                        (bv-workspace-root directory)))))
+      (bv-list--switch kind query)
+    (bv-list--open kind directory query)))
+
+(defun bv-list--known-labels (workspace)
+  "Return sorted issue labels found in WORKSPACE."
+  (let (result)
+    (dolist (issue (bv-json-issues
+                    (bv-br-sync '("list" "--all" "--json") workspace)))
+      (let ((labels (bv-object-get issue 'labels)))
+        (dolist (label (cond
+                        ((vectorp labels) (append labels nil))
+                        ((listp labels) labels)))
+          (when (and (stringp label) (not (string-empty-p label)))
+            (cl-pushnew label result :test #'equal)))))
+    (sort result #'string-lessp)))
+
+(defun bv-list--read-label (workspace)
+  "Read an existing issue label from WORKSPACE."
+  (let ((labels (bv-list--known-labels workspace)))
+    (unless labels
+      (user-error "No Beads labels found in %s" workspace))
+    (completing-read "Label: " labels nil t)))
+
 ;;;###autoload
 (defun bv-list (&optional directory)
   "Open all Beads issues in DIRECTORY."
   (interactive)
-  (bv-list--open 'all directory))
+  (bv-list--visit 'all directory))
 
 ;;;###autoload
 (defun bv-list-all (&optional directory)
-  "Open all Beads issues in DIRECTORY."
+  "Show all Beads issues in DIRECTORY."
   (interactive)
-  (bv-list--open 'all (or directory bv-workspace)))
+  (bv-list--visit 'all directory))
+
+;;;###autoload
+(defun bv-list-open (&optional directory)
+  "Show open Beads issues in DIRECTORY."
+  (interactive)
+  (bv-list--visit 'open directory))
+
+;;;###autoload
+(defun bv-list-closed (&optional directory)
+  "Show closed Beads issues in DIRECTORY."
+  (interactive)
+  (bv-list--visit 'closed directory))
 
 ;;;###autoload
 (defun bv-list-ready (&optional directory)
-  "Open ready Beads issues in DIRECTORY."
+  "Show ready Beads issues in DIRECTORY."
   (interactive)
-  (bv-list--open 'ready (or directory bv-workspace)))
+  (bv-list--visit 'ready directory))
 
 ;;;###autoload
 (defalias 'bv-ready #'bv-list-ready)
 
 ;;;###autoload
 (defun bv-list-blocked (&optional directory)
-  "Open blocked Beads issues in DIRECTORY."
+  "Show blocked Beads issues in DIRECTORY."
   (interactive)
-  (bv-list--open 'blocked (or directory bv-workspace)))
+  (bv-list--visit 'blocked directory))
 
 ;;;###autoload
 (defalias 'bv-blocked #'bv-list-blocked)
+
+;;;###autoload
+(defun bv-list-label (label &optional directory)
+  "Show issues with LABEL in the Beads workspace at DIRECTORY."
+  (interactive
+   (let ((workspace (bv-workspace-root)))
+     (list (bv-list--read-label workspace) nil)))
+  (when (string-empty-p label)
+    (user-error "Label cannot be empty"))
+  (bv-list--visit 'label directory label))
 
 ;;;###autoload
 (defun bv-list-search (query &optional directory)
@@ -355,7 +438,7 @@ This wrapper makes the renderer convenient to exercise independently."
   (interactive (list (read-string "Search Beads: ") bv-workspace))
   (when (string-empty-p query)
     (user-error "Search text cannot be empty"))
-  (bv-list--open 'search (or directory bv-workspace) query))
+  (bv-list--visit 'search directory query))
 
 ;;;###autoload
 (defalias 'bv-search #'bv-list-search)

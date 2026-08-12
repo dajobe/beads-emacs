@@ -24,8 +24,11 @@
   "Open the Beads command menu."
   [["Browse"
     ("a" "All issues" bv-list-all)
+    ("O" "Open" bv-list-open)
+    ("X" "Closed" bv-list-closed)
     ("r" "Ready" bv-list-ready)
     ("b" "Blocked" bv-list-blocked)
+    ("F" "Label" bv-list-label)
     ("/" "Search" bv-list-search)
     ("s" "Show issue" bv-show)]
    ["Analyze"

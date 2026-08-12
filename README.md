@@ -69,8 +69,11 @@ automatically refresh after debounced external changes.
 | Command               | Purpose                                    |
 |:----------------------|:-------------------------------------------|
 | `M-x bv`              | Open the main issue list                   |
+| `M-x bv-list-open`    | List open issues                           |
+| `M-x bv-list-closed`  | List closed issues                         |
 | `M-x bv-list-ready`   | List issues with no blockers               |
 | `M-x bv-list-blocked` | List blocked issues                        |
+| `M-x bv-list-label`   | Filter issues by label                     |
 | `M-x bv-list-search`  | Search issues in the current workspace     |
 | `M-x bv-show`         | Open an issue by ID                        |
 | `M-x bv-triage`       | Show graph-aware triage recommendations    |
@@ -85,7 +88,9 @@ their corresponding `bv-list-*` commands. `bv-transient` is an alias for
 
 List and detail buffers display their available bindings through `C-h m`. Common
 navigation follows normal Emacs conventions: `RET` visits the issue at point,
-`g` refreshes the current view, and `q` quits the window.
+`g` refreshes the current view, and `q` quits the window. In a list buffer, `a`,
+`o`, `c`, `r`, and `b` switch the same buffer to All, Open, Closed, Ready, and
+Blocked respectively. `l` filters by label and `/` searches in place.
 
 ## Customization
 
