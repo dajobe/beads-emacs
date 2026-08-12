@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Added responsive issue rows with type icons, compact states, titles, and
+  right-aligned relative creation times.
 - Added in-place All, Open, Closed, Ready, Blocked, label, and search list
   filters matching the main `bv` filtering keys.
 - Added issue ID and title completion to interactive `bv-show` selection.

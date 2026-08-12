@@ -64,6 +64,10 @@ shown in the buffer, so buffers from different repositories do not share
 results. Visible Beads buffers also watch the workspace JSONL export and
 automatically refresh after debounced external changes.
 
+Issue rows prioritize the type icon, priority, compact state, ID, and title.
+Their creation age stays aligned at the right edge so recent work remains easy
+to spot without requiring rigid, wide columns.
+
 ## Main commands
 
 | Command               | Purpose                                    |

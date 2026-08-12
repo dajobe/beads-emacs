@@ -11,6 +11,7 @@
 
 (require 'cl-lib)
 (require 'easymenu)
+(require 'parse-time)
 (require 'tabulated-list)
 (require 'subr-x)
 (require 'bv-core)
@@ -142,6 +143,9 @@
 (defvar-local bv-list--busy nil
   "Non-nil while the list is being refreshed.")
 
+(defvar-local bv-list--displayed-width nil
+  "Window width used for the most recent responsive row rendering.")
+
 (defun bv-list--object-get (object key &optional default)
   "Return KEY from OBJECT, or DEFAULT.
 
@@ -169,58 +173,180 @@ This wrapper makes the renderer convenient to exercise independently."
                  (_ 'bv-priority-low-face))))
     (propertize priority 'face face)))
 
+(defun bv-list--type-icon (issue)
+  "Return a type icon with explanatory text for ISSUE."
+  (let* ((type (bv-list--string (bv-list--object-get issue 'issue_type)))
+         (icon (pcase type
+                 ("bug" "🐛")
+                 ("feature" "✨")
+                 ("task" "📋")
+                 ("epic" "🚀")
+                 ("chore" "🧹")
+                 (_ "•"))))
+    (propertize icon 'help-echo
+                (format "Type: %s" (if (string-empty-p type) "unknown" type)))))
+
 (defun bv-list--status-string (issue)
-  "Return the formatted status for ISSUE."
+  "Return the compact formatted status for ISSUE."
   (let* ((status (bv-list--string (bv-list--object-get issue 'status "")))
          (blocked-count
           (string-to-number
            (bv-list--string
             (bv-list--object-get issue 'blocked_by_count 0))))
-         (blocked (or (equal bv-list-kind 'blocked)
+         (blocked (or (string= status "blocked")
+                      (equal bv-list-kind 'blocked)
                       (> blocked-count 0)))
+         (label (if blocked
+                    "BLKD"
+                  (pcase status
+                    ("open" "OPEN")
+                    ("in_progress" "PROG")
+                    ("closed" "DONE")
+                    ("deferred" "DEFR")
+                    ("draft" "DRFT")
+                    ("pinned" "PIN")
+                    ("hooked" "HOOK")
+                    ("review" "REVW")
+                    ("tombstone" "TOMB")
+                    (_ "????"))))
          (face (cond
                 (blocked 'bv-status-blocked-face)
                 ((string= status "closed") 'bv-status-closed-face)
                 ((string= status "in_progress") 'bv-status-progress-face)
                 ((string= status "open") 'bv-status-open-face)
                 (t 'default))))
-    (propertize (replace-regexp-in-string "_" " " status) 'face face)))
+    (propertize label 'face face 'help-echo (format "Status: %s" status))))
+
+(defun bv-list--relative-time (timestamp &optional now)
+  "Return TIMESTAMP relative to NOW in the compact `bv' style."
+  (let ((text (bv-list--string timestamp))
+        (unknown "unknown"))
+    (if (not
+         (string-match-p
+          (rx string-start
+              (= 4 digit) "-" (= 2 digit) "-" (= 2 digit) "T"
+              (= 2 digit) ":" (= 2 digit) ":" (= 2 digit)
+              (optional "." (+ digit))
+              (or "Z" (seq (any "+-") (= 2 digit) ":" (= 2 digit)))
+              string-end)
+          text))
+        unknown
+      (condition-case nil
+          (let ((seconds
+                 (float-time
+                  (time-subtract (or now (current-time))
+                                 (parse-iso8601-time-string text)))))
+            (cond
+             ((< seconds 60) "now")
+             ((< seconds 3600) (format "%dm ago" (floor (/ seconds 60))))
+             ((< seconds 86400) (format "%dh ago" (floor (/ seconds 3600))))
+             ((< seconds 604800) (format "%dd ago" (floor (/ seconds 86400))))
+             ((< seconds 2592000)
+              (format "%dw ago" (floor (/ seconds 604800))))
+             (t (format "%dmo ago" (floor (/ seconds 2592000))))))
+        (error unknown)))))
+
+(defun bv-list--age-string (issue)
+  "Return a muted relative creation age for ISSUE."
+  (let* ((timestamp (or (bv-list--object-get issue 'created_at)
+                        (bv-list--object-get issue 'updated_at)))
+         (age (bv-list--relative-time timestamp)))
+    (propertize age 'face 'bv-muted-face
+                'help-echo (if timestamp
+                               (format "Created: %s" timestamp)
+                             "Creation time unknown"))))
 
 (defun bv-list--entry (issue)
   "Convert ISSUE to a `tabulated-list-mode' entry."
   (let ((id (bv-list--string (bv-list--object-get issue 'id))))
     (list id
           (vector
+           (bv-list--type-icon issue)
            (bv-list--priority-string issue)
            (bv-list--status-string issue)
-           (bv-list--string (bv-list--object-get issue 'issue_type))
            (propertize id 'face 'bv-issue-id-face)
            (bv-list--string (bv-list--object-get issue 'title))
-           (bv-list--string (bv-list--object-get issue 'assignee))))))
+           (bv-list--age-string issue)))))
 
 (defun bv-list--entries ()
   "Return tabulated entries for `bv-list-issues'."
   (mapcar #'bv-list--entry bv-list-issues))
 
+(defun bv-list--display-width ()
+  "Return the usable display width for the current list buffer."
+  (if-let* ((window (get-buffer-window (current-buffer) t)))
+      (window-body-width window)
+    80))
+
+(defun bv-list--truncate (text width)
+  "Truncate TEXT to display WIDTH with an ellipsis."
+  (if (<= width 0)
+      ""
+    (truncate-string-to-width text width nil nil "…")))
+
+(defun bv-list--print-entry (id columns)
+  "Insert responsive list entry ID described by COLUMNS."
+  (let* ((inhibit-read-only t)
+         (beg (point))
+         (icon (aref columns 0))
+         (priority (aref columns 1))
+         (status (aref columns 2))
+         (issue-id (aref columns 3))
+         (title (aref columns 4))
+         (age (aref columns 5))
+         (age-width 8)
+         (width (max 24 (bv-list--display-width)))
+         (fixed-prefix (concat "  " icon " " priority " " status " "))
+         (minimum-title-width 8)
+         (id-budget (max 8 (- width (string-width fixed-prefix)
+                              age-width minimum-title-width 2)))
+         (visible-id (bv-list--truncate issue-id id-budget))
+         (prefix (concat fixed-prefix visible-id " "))
+         (title-width (max 0 (- width (string-width prefix) age-width 1)))
+         (visible-title (bv-list--truncate title title-width)))
+    (insert prefix visible-title)
+    (insert (propertize " " 'display
+                        `(space :align-to (- right-fringe ,age-width))))
+    (insert (format (format "%%%ds" age-width) age) "\n")
+    (add-text-properties
+     beg (point)
+     `(tabulated-list-id ,id tabulated-list-entry ,columns))))
+
 (define-derived-mode bv-list-mode tabulated-list-mode "Beads"
   "Major mode for browsing Beads issues."
   (setq tabulated-list-format
-        [("Priority" 9 bv-list--sort-priority)
-         ("Status" 13 t)
-         ("Type" 10 t)
+        [("Type" 3 t)
+         ("Priority" 3 bv-list--sort-priority)
+         ("Status" 5 t)
          ("ID" 28 t)
          ("Title" 48 t)
-         ("Assignee" 18 t)])
-  (setq tabulated-list-padding 2
+         ("Age" 8 t :right-align t)])
+  (setq tabulated-list-padding 0
         tabulated-list-entries #'bv-list--entries
+        tabulated-list-printer #'bv-list--print-entry
         tabulated-list-sort-key '("Priority" . nil))
   (add-hook 'tabulated-list-revert-hook #'bv-list-refresh nil t)
+  (add-hook 'window-size-change-functions
+            #'bv-list--window-size-change nil t)
   (tabulated-list-init-header))
 
 (defun bv-list--sort-priority (a b)
   "Return non-nil when entry A has a lower priority number than B."
-  (< (string-to-number (string-remove-prefix "P" (aref (cadr a) 0)))
-     (string-to-number (string-remove-prefix "P" (aref (cadr b) 0)))))
+  (< (string-to-number (string-remove-prefix "P" (aref (cadr a) 1)))
+     (string-to-number (string-remove-prefix "P" (aref (cadr b) 1)))))
+
+(defun bv-list--window-size-change (window)
+  "Redisplay list rows after a width change in WINDOW."
+  (let ((buffer (window-buffer window)))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (when (derived-mode-p 'bv-list-mode)
+          (let ((width (window-body-width window)))
+            (unless (equal width bv-list--displayed-width)
+              (setq bv-list--displayed-width width
+                    bv-list--selected-id (tabulated-list-get-id))
+              (tabulated-list-print t)
+              (bv-list--restore-selection bv-list--selected-id))))))))
 
 (defun bv-list-current-id (&optional prompt)
   "Return the issue ID at point, prompting when needed if PROMPT is non-nil."
@@ -252,6 +378,15 @@ This wrapper makes the renderer convenient to exercise independently."
     ('label (format "Label: %s" bv-list-query))
     ('search (format "Search: %s" bv-list-query))
     (_ (capitalize (symbol-name bv-list-kind)))))
+
+(defun bv-list--header-line ()
+  "Return a responsive header for the current issue list."
+  (list (format "%s — %s issue%s    TYPE PRI STATUS ID TITLE"
+                (bv-list--view-title)
+                (length bv-list-issues)
+                (if (= (length bv-list-issues) 1) "" "s"))
+        (propertize " " 'display '(space :align-to (- right-fringe 3)))
+        "AGE"))
 
 (defun bv-list--args ()
   "Return the `br' arguments for the current list view."
@@ -290,13 +425,10 @@ This wrapper makes the renderer convenient to exercise independently."
       (when (= generation bv-list--refresh-generation)
         (setq bv-list-issues (bv-json-issues json))
         (bv-list--set-busy nil)
+        (setq bv-list--displayed-width (bv-list--display-width))
         (tabulated-list-print t)
         (bv-list--restore-selection bv-list--selected-id)
-        (setq header-line-format
-              (format "%s — %s issue%s"
-                      (bv-list--view-title)
-                      (length bv-list-issues)
-                      (if (= (length bv-list-issues) 1) "" "s")))))))
+        (setq header-line-format (bv-list--header-line))))))
 
 (defun bv-list--failure (buffer generation error-data)
   "Report ERROR-DATA for BUFFER if GENERATION is current."

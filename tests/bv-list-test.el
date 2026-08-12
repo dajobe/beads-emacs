@@ -45,18 +45,20 @@
        "\"status\":\"closed\",\"issue_type\":\"bug\"}]}")))
     (should (= (length bv-list-issues) 2))
     (should-not bv-list--busy)
-    (should (equal header-line-format "All — 2 issues"))
+    (should (string-prefix-p "All — 2 issues    TYPE PRI STATUS ID TITLE"
+                             (car header-line-format)))
     (goto-char (point-min))
+    (search-forward "📋")
     (search-forward "P0")
     (should (eq (get-text-property (1- (point)) 'face)
                 'bv-priority-0-face))
-    (search-forward "open")
+    (search-forward "OPEN")
     (should (eq (get-text-property (1- (point)) 'face)
                 'bv-status-open-face))
     (search-forward "P3")
     (should (eq (get-text-property (1- (point)) 'face)
                 'bv-priority-low-face))
-    (search-forward "closed")
+    (search-forward "DONE")
     (should (eq (get-text-property (1- (point)) 'face)
                 'bv-status-closed-face))))
 
@@ -69,9 +71,10 @@
      (current-buffer) 1
      (bv-test-json
       "[{\"id\":\"bve-ready\",\"title\":\"Do it\",\"priority\":2,\"status\":\"in_progress\",\"issue_type\":\"task\"}]"))
-    (should (equal header-line-format "Ready — 1 issue"))
+    (should (string-prefix-p "Ready — 1 issue    TYPE PRI STATUS ID TITLE"
+                             (car header-line-format)))
     (goto-char (point-min))
-    (search-forward "in progress")
+    (search-forward "PROG")
     (should (eq (get-text-property (1- (point)) 'face)
                 'bv-status-progress-face))))
 
@@ -81,9 +84,126 @@
     (setq bv-list-kind 'blocked)
     (let ((status (bv-list--status-string
                    '(("status" . "open") ("blocked_by_count" . 0)))))
-      (should (equal status "open"))
+      (should (equal status "BLKD"))
       (should (eq (get-text-property 0 'face status)
                   'bv-status-blocked-face)))))
+
+(ert-deftest bv-list-type-icons-explain-known-and-custom-types ()
+  (dolist (case '(("bug" . "🐛")
+                  ("feature" . "✨")
+                  ("task" . "📋")
+                  ("epic" . "🚀")
+                  ("chore" . "🧹")
+                  ("custom" . "•")))
+    (let ((icon (bv-list--type-icon
+                 `(("issue_type" . ,(car case))))))
+      (should (equal icon (cdr case)))
+      (should (equal (get-text-property 0 'help-echo icon)
+                     (format "Type: %s" (car case)))))))
+
+(ert-deftest bv-list-compact-status-labels-match-bv-vocabulary ()
+  (dolist (case '(("open" . "OPEN")
+                  ("in_progress" . "PROG")
+                  ("blocked" . "BLKD")
+                  ("closed" . "DONE")
+                  ("deferred" . "DEFR")
+                  ("draft" . "DRFT")
+                  ("pinned" . "PIN")
+                  ("hooked" . "HOOK")
+                  ("review" . "REVW")
+                  ("tombstone" . "TOMB")
+                  ("custom" . "????")))
+    (let ((bv-list-kind 'all))
+      (should (equal (bv-list--status-string
+                      `(("status" . ,(car case))))
+                     (cdr case))))))
+
+(ert-deftest bv-list-relative-time-has-compact-stable-boundaries ()
+  (let ((now (date-to-time "2026-08-12T02:00:00Z")))
+    (dolist (case '((0 . "now")
+                    (59 . "now")
+                    (60 . "1m ago")
+                    (3599 . "59m ago")
+                    (3600 . "1h ago")
+                    (86399 . "23h ago")
+                    (86400 . "1d ago")
+                    (604800 . "1w ago")
+                    (2592000 . "1mo ago")))
+      (let ((timestamp
+             (format-time-string
+              "%Y-%m-%dT%H:%M:%SZ"
+              (time-subtract now (seconds-to-time (car case))) t)))
+        (should (equal (bv-list--relative-time timestamp now)
+                       (cdr case)))))
+    (should (equal (bv-list--relative-time "not-a-time" now) "unknown"))
+    (should (equal (bv-list--relative-time nil now) "unknown"))))
+
+(ert-deftest bv-list-responsive-row-preserves-leading-fields-and-age ()
+  (with-temp-buffer
+    (bv-list-mode)
+    (let* ((columns
+            (vector
+             (propertize "✨" 'help-echo "Type: feature")
+             (propertize "P1" 'face 'bv-priority-1-face)
+             (propertize "DONE" 'face 'bv-status-closed-face)
+             (propertize "bve-long-identifier" 'face 'bv-issue-id-face)
+             "A title whose ending must disappear before the age does"
+             (propertize "6m ago" 'face 'bv-muted-face)))
+           (id "bve-long-identifier"))
+      (cl-letf (((symbol-function 'bv-list--display-width) (lambda () 58)))
+        (bv-list--print-entry id columns))
+      (goto-char (point-min))
+      (should (equal (tabulated-list-get-id) id))
+      (should (string-match-p
+               "✨ P1 DONE bve-long-identifier A title.*…"
+               (buffer-string)))
+      (should-not (string-match-p "age does" (buffer-string)))
+      (search-forward "6m ago")
+      (should (eq (get-text-property (1- (point)) 'face) 'bv-muted-face))
+      (let* ((change (previous-single-property-change
+                      (match-beginning 0) 'display nil
+                      (line-beginning-position)))
+             (alignment (and change
+                             (get-text-property (1- change) 'display))))
+        (should (equal alignment
+                       '(space :align-to (- right-fringe 8))))))))
+
+(ert-deftest bv-list-window-resize-rerenders-without-losing-selection ()
+  (with-temp-buffer
+    (bv-list-mode)
+    (setq bv-list--displayed-width 80)
+    (let ((buffer (current-buffer))
+          (selected "bve-selected")
+          printed restored)
+      (let ((inhibit-read-only t))
+        (insert "row\n")
+        (put-text-property (point-min) (point-max)
+                           'tabulated-list-id selected)
+        (goto-char (point-min)))
+      (cl-letf (((symbol-function 'window-buffer)
+                 (lambda (_window) buffer))
+                ((symbol-function 'window-body-width)
+                 (lambda (_window) 120))
+                ((symbol-function 'tabulated-list-print)
+                 (lambda (&optional remember-position)
+                   (setq printed remember-position)))
+                ((symbol-function 'bv-list--restore-selection)
+                 (lambda (id) (setq restored id))))
+        (bv-list--window-size-change 'window)
+        (should (= bv-list--displayed-width 120))
+        (should printed)
+        (should (equal restored selected))
+        (setq printed nil)
+        (bv-list--window-size-change 'window)
+        (should-not printed)))))
+
+(ert-deftest bv-list-age-prefers-created-time-and-explains-the-source ()
+  (let* ((created "2026-08-12T01:00:00Z")
+         (age (bv-list--age-string
+               `(("created_at" . ,created)
+                 ("updated_at" . "2026-08-12T01:59:00Z")))))
+    (should (equal (get-text-property 0 'help-echo age)
+                   (format "Created: %s" created)))))
 
 (ert-deftest bv-list-refresh-preserves-selection-and-uses-workspace ()
   (bv-test-with-workspace
