@@ -113,8 +113,8 @@ bindings use the same `O`, `X`, and `c` shortcuts.
 Run `M-x customize-group RET beads RET` to see all options. The primary options
 are:
 
-- `beads-br-executable`: executable name or path for `br`.
-- `beads-bv-executable`: executable name or path for `bv`.
+- `beads-br-executable`: executable name for `br` on `exec-path`.
+- `beads-bv-executable`: executable name for `bv` on `exec-path`.
 - `beads-default-workspace`: fallback workspace when the current buffer is not
   inside one.
 - `beads-database-file`: optional database passed to Beads commands.
@@ -126,13 +126,14 @@ are:
 For example:
 
 ```emacs-lisp
-(setq beads-br-executable "/opt/homebrew/bin/br"
-      beads-bv-executable "/opt/homebrew/bin/bv"
+(setq beads-br-executable "br"
+      beads-bv-executable "bv"
       beads-default-workspace "~/src/project/")
 ```
 
 Executable options must name programs Emacs can run. If `br` and `bv` work in a
-terminal but not in Emacs, update `exec-path` or use absolute paths.
+terminal but not in Emacs, add their installation directory to `exec-path`.
+Absolute and relative executable paths are not accepted.
 
 ## Workspace selection
 

@@ -26,14 +26,15 @@
 
 (defun beads--version-string (executable)
   "Return version output from EXECUTABLE, or signal a user error."
-  (let ((path (executable-find executable)))
-    (unless path
-      (user-error "Beads executable not found: %s" executable))
-    (with-temp-buffer
-      (let ((status (process-file path nil t nil "--version")))
-        (unless (and (integerp status) (zerop status))
-          (user-error "%s --version failed with status %s" path status))
-        (string-trim (buffer-string))))))
+  (condition-case resolution-error
+      (let ((path (beads--resolve-executable executable)))
+        (with-temp-buffer
+          (let ((status (process-file path nil t nil "--version")))
+            (unless (and (integerp status) (zerop status))
+              (user-error "%s --version failed with status %s" path status))
+            (string-trim (buffer-string)))))
+    (file-missing
+     (user-error "%s" (error-message-string resolution-error)))))
 
 ;;;###autoload
 (defun beads-check (&optional directory)

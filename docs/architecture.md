@@ -27,8 +27,9 @@ must not depend on a user-interface module.
 
 Commands are passed as argument lists to `make-process` or `process-file`. Shell
 command strings and direct execution of command text returned by `bv` are
-forbidden. `default-directory` is the workspace root. Read commands always
-request JSON:
+forbidden. Executable command names are resolved only through `exec-path`;
+absolute and relative paths are rejected. `default-directory` is the workspace
+root. Read commands always request JSON:
 
 - `br list --json`, `br ready --json`, `br blocked --json`, `br show ID --json`,
   and `br search QUERY --json` provide issue data.

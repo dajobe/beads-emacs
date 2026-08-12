@@ -27,12 +27,12 @@
   :group 'tools)
 
 (defcustom beads-br-executable "br"
-  "Name or absolute path of the br executable."
-  :type 'file)
+  "Name of the br executable to find on the variable `exec-path'."
+  :type 'string)
 
 (defcustom beads-bv-executable "bv"
-  "Name or absolute path of the bv executable."
-  :type 'file)
+  "Name of the bv executable to find on the variable `exec-path'."
+  :type 'string)
 
 (defcustom beads-default-workspace nil
   "Default Beads workspace directory.
@@ -78,6 +78,18 @@ The path may be absolute or relative to the selected workspace."
 (define-error 'beads-command-error "Beads command failed")
 (define-error 'beads-json-error "Invalid JSON from a Beads command"
               'beads-command-error)
+
+(defun beads--resolve-executable (program)
+  "Return the executable path for PROGRAM found through variable `exec-path'.
+PROGRAM must be a command name without a directory component."
+  (unless (and (stringp program)
+               (not (string-empty-p program))
+               (equal program (file-name-nondirectory program)))
+    (signal 'file-missing
+            (list "Executable must be a command name on exec-path" program)))
+  (or (executable-find program)
+      (signal 'file-missing
+              (list "Executable not found on exec-path" program))))
 
 (defun beads--marker-directory (directory)
   "Return the workspace containing DIRECTORY, or nil."
@@ -319,7 +331,8 @@ WORKSPACE defaults to `beads-workspace-root'.  Signal
     (unwind-protect
         (progn
           (condition-case process-error
-              (setq status (apply #'process-file program nil
+              (setq status (apply #'process-file
+                                  (beads--resolve-executable program) nil
                                   (list stdout stderr-file) nil arguments)
                     stderr (with-temp-buffer
                              (insert-file-contents stderr-file)
@@ -430,16 +443,17 @@ A newer request in the same buffer supersedes this one.  Return the process."
       (run-hooks 'beads-before-refresh-hook))
     (let ((default-directory root))
       (condition-case process-error
-          (setq process
-                (make-process
-                 :name (format "beads-%d" generation)
-                 :buffer stdout :stderr stderr :noquery t
-                 :command (cons program argv)
-                 :sentinel
-                 (lambda (proc _event)
-                   (beads--async-finished
-                    proc target generation program argv root stdout stderr
-                    callback error-callback))))
+          (let ((executable (beads--resolve-executable program)))
+            (setq process
+                  (make-process
+                   :name (format "beads-%d" generation)
+                   :buffer stdout :stderr stderr :noquery t
+                   :command (cons executable argv)
+                   :sentinel
+                   (lambda (proc _event)
+                     (beads--async-finished
+                      proc target generation program argv root stdout stderr
+                      callback error-callback)))))
         (file-error
          (let ((data (list :program program :arguments argv :workspace root
                            :status 'file-error

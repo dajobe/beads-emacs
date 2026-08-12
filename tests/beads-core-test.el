@@ -53,10 +53,29 @@
     (should (equal (beads-object-get (car issues) "id") "x-2"))
     (should (equal (beads-object-get (cadr issues) "id") "x-3"))))
 
+(ert-deftest beads-core-executable-resolution-requires-exec-path-name ()
+  (let (lookups)
+    (cl-letf (((symbol-function 'executable-find)
+               (lambda (program)
+                 (push program lookups)
+                 (and (equal program "br") "/exec-path/bin/br"))))
+      (should (equal (beads--resolve-executable "br") "/exec-path/bin/br"))
+      (should-error (beads--resolve-executable "missing")
+                    :type 'file-missing)
+      (should-error (beads--resolve-executable "/opt/bin/br")
+                    :type 'file-missing)
+      (should-error (beads--resolve-executable "./br")
+                    :type 'file-missing)
+      (should (equal (nreverse lookups) '("br" "missing"))))))
+
 (ert-deftest beads-core-sync-uses-argv-workspace-and-database ()
   (beads-core-test--workspace
    (let ((beads-database-file "custom.db") captured)
-     (cl-letf (((symbol-function 'process-file)
+     (cl-letf (((symbol-function 'executable-find)
+                (lambda (program)
+                  (should (equal program "br"))
+                  "/exec-path/bin/br"))
+               ((symbol-function 'process-file)
                 (lambda (program _in destination _display &rest arguments)
                   (setq captured (list program default-directory arguments))
                   (with-current-buffer (car destination)
@@ -64,7 +83,7 @@
                   0)))
        (should (eq (beads-object-get
                     (beads-command-sync "br" '("list" "--json")) "ok") t))
-       (should (equal (car captured) "br"))
+       (should (equal (car captured) "/exec-path/bin/br"))
        (should (equal (cadr captured)
                       (file-name-as-directory (file-truename root))))
        (should (equal (caddr captured)
@@ -92,7 +111,9 @@
   (beads-core-test--workspace
    (let ((beads-error-buffer-name " *bv invalid json*"))
      (unwind-protect
-         (cl-letf (((symbol-function 'process-file)
+         (cl-letf (((symbol-function 'executable-find)
+                    (lambda (_program) "/exec-path/bin/br"))
+                   ((symbol-function 'process-file)
                     (lambda (_program _in destination _display &rest _args)
                       (with-current-buffer (car destination) (insert "oops"))
                       0)))
@@ -108,7 +129,9 @@
   (beads-core-test--workspace
    (let ((beads-error-buffer-name " *bv test errors*"))
      (unwind-protect
-         (cl-letf (((symbol-function 'process-file)
+         (cl-letf (((symbol-function 'executable-find)
+                    (lambda (_program) "/exec-path/bin/br"))
+                   ((symbol-function 'process-file)
                     (lambda (_program _in destination _display &rest _args)
                       (with-temp-file (cadr destination) (insert "bad option"))
                       2)))
@@ -126,7 +149,9 @@
    (let ((target (generate-new-buffer " *bv async target*"))
          processes callbacks)
      (unwind-protect
-         (cl-letf (((symbol-function 'make-process)
+         (cl-letf (((symbol-function 'executable-find)
+                    (lambda (_program) "/exec-path/bin/br"))
+                   ((symbol-function 'make-process)
                     (lambda (&rest properties)
                       (let ((process (list properties)))
                         (push process processes)

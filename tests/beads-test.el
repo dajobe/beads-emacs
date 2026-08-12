@@ -57,6 +57,16 @@
       (should (string-match-p "--version failed with status 2"
                               (error-message-string error-data))))))
 
+(ert-deftest beads-version-string-rejects-executable-paths ()
+  (cl-letf (((symbol-function 'executable-find)
+             (lambda (_executable)
+               (ert-fail "Path-valued configuration bypassed exec-path"))))
+    (let ((error-data (should-error
+                       (beads--version-string "/opt/homebrew/bin/br")
+                       :type 'user-error)))
+      (should (string-match-p "command name on exec-path"
+                              (error-message-string error-data))))))
+
 (ert-deftest beads-check-renders-both-versions-in-workspace ()
   (beads-test-with-workspace
    (let ((beads-br-executable "custom-br")

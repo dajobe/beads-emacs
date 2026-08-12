@@ -16,6 +16,8 @@ and this project adheres to
 
 ### Fixed
 
+- Required `br` and `bv` executable names to resolve through `exec-path` instead
+  of accepting absolute or relative paths.
 - Made the help popup context-sensitive and kept it aligned with every direct
   binding in list, issue-detail, and analysis buffers.
 
