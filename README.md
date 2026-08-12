@@ -1,6 +1,6 @@
-# bv-emacs
+# beads-emacs
 
-`bv-emacs` is an Emacs 29+ interface to
+`beads-emacs` is an Emacs 29+ interface to
 [Beads Rust (`br`)](https://github.com/Dicklesworthstone/beads_rust) and
 [Beads Viewer (`bv`)](https://github.com/Dicklesworthstone/beads_viewer). It
 keeps issue storage and mutations in `br` while using the graph-aware `bv` robot
@@ -27,35 +27,35 @@ compatible releases.
 Clone this repository, then add it to `load-path`:
 
 ```emacs-lisp
-(add-to-list 'load-path "/path/to/bv-emacs")
-(require 'bv)
+(add-to-list 'load-path "/path/to/beads-emacs")
+(require 'beads)
 ```
 
 With `use-package`:
 
 ```emacs-lisp
-(use-package bv
-  :load-path "/path/to/bv-emacs"
-  :commands (bv bv-menu bv-ready bv-triage))
+(use-package beads
+  :load-path "/path/to/beads-emacs"
+  :commands (beads bv beads-menu beads-ready beads-triage))
 ```
 
-You can byte-compile and install the package under
-`~/.emacs.d/site-lisp/bv-emacs` with:
+You can byte-compile and install the package under `~/.emacs.d/site-lisp/beads`
+with:
 
 ```console
 make install
 ```
 
-Add that directory to `load-path` before requiring `bv`. Override the
+Add that directory to `load-path` before requiring `beads`. Override the
 destination with `make install PREFIX=/another/prefix` or `make install
 INSTALL_DIR=/exact/directory`.
 
 ## Getting started
 
 1. Visit any file inside a repository containing `.beads` or `_beads`.
-2. Run `M-x bv` to open the main issue list.
+2. Run `M-x beads` to open the main issue list. `M-x bv` is a shorter alias.
 3. Press `RET` on an issue to open its detail buffer.
-4. Press `?` or run `M-x bv-menu` for the menu of lists, analysis, and
+4. Press `?` or run `M-x beads-menu` for the menu of lists, analysis, and
    mutations.
 
 The package runs list, detail, and analysis reads asynchronously and preserves
@@ -70,26 +70,27 @@ to spot without requiring rigid, wide columns.
 
 ## Main commands
 
-| Command               | Purpose                                    |
-|:----------------------|:-------------------------------------------|
-| `M-x bv`              | Open the main issue list                   |
-| `M-x bv-list-open`    | List open issues                           |
-| `M-x bv-list-closed`  | List closed issues                         |
-| `M-x bv-list-ready`   | List issues with no blockers               |
-| `M-x bv-list-blocked` | List blocked issues                        |
-| `M-x bv-list-label`   | Filter issues by label                     |
-| `M-x bv-list-search`  | Search issues in the current workspace     |
-| `M-x bv-show`         | Open an issue by ID                        |
-| `M-x bv-triage`       | Show graph-aware triage recommendations    |
-| `M-x bv-next`         | Show the single top recommendation         |
-| `M-x bv-plan`         | Show parallel dependency-aware work tracks |
-| `M-x bv-check`        | Check the workspace and tool versions      |
-| `M-x bv-menu`         | Open the discoverable command menu         |
+| Command                  | Purpose                                    |
+|:-------------------------|:-------------------------------------------|
+| `M-x beads`              | Open the main issue list                   |
+| `M-x bv`                 | Alias for `M-x beads`                      |
+| `M-x beads-list-open`    | List open issues                           |
+| `M-x beads-list-closed`  | List closed issues                         |
+| `M-x beads-list-ready`   | List issues with no blockers               |
+| `M-x beads-list-blocked` | List blocked issues                        |
+| `M-x beads-list-label`   | Filter issues by label                     |
+| `M-x beads-list-search`  | Search issues in the current workspace     |
+| `M-x beads-show`         | Open an issue by ID                        |
+| `M-x beads-triage`       | Show graph-aware triage recommendations    |
+| `M-x beads-next`         | Show the single top recommendation         |
+| `M-x beads-plan`         | Show parallel dependency-aware work tracks |
+| `M-x beads-check`        | Check the workspace and tool versions      |
+| `M-x beads-menu`         | Open the discoverable command menu         |
 
-The shorter `bv-ready`, `bv-blocked`, and `bv-search` commands are aliases for
-their corresponding `bv-list-*` commands. `bv-transient` is an alias for
-`bv-menu`. The `?` popup adapts to list, issue-detail, and analysis buffers so
-its current-buffer section documents the bindings that work there.
+The shorter `beads-ready`, `beads-blocked`, and `beads-search` commands are
+aliases for their corresponding `beads-list-*` commands. `beads-transient` is an
+alias for `beads-menu`. The `?` popup adapts to list, issue-detail, and analysis
+buffers so its current-buffer section documents the bindings that work there.
 
 List and detail buffers display their available bindings through `C-h m`. Common
 navigation follows normal Emacs conventions: `RET` visits the issue at point,
@@ -101,25 +102,25 @@ bindings use the same `O`, `X`, and `c` shortcuts.
 
 ## Customization
 
-Run `M-x customize-group RET bv RET` to see all options. The primary options
+Run `M-x customize-group RET beads RET` to see all options. The primary options
 are:
 
-- `bv-br-executable`: executable name or path for `br`.
-- `bv-bv-executable`: executable name or path for `bv`.
-- `bv-default-workspace`: fallback workspace when the current buffer is not
+- `beads-br-executable`: executable name or path for `br`.
+- `beads-bv-executable`: executable name or path for `bv`.
+- `beads-default-workspace`: fallback workspace when the current buffer is not
   inside one.
-- `bv-database-file`: optional database passed to Beads commands.
-- `bv-error-buffer-name`: buffer used for retained command diagnostics.
-- `bv-auto-refresh-on-change`: whether visible Beads buffers watch for external
-  JSONL changes.
-- `bv-auto-refresh-delay`: debounce delay before an automatic refresh.
+- `beads-database-file`: optional database passed to Beads commands.
+- `beads-error-buffer-name`: buffer used for retained command diagnostics.
+- `beads-auto-refresh-on-change`: whether visible Beads buffers watch for
+  external JSONL changes.
+- `beads-auto-refresh-delay`: debounce delay before an automatic refresh.
 
 For example:
 
 ```emacs-lisp
-(setq bv-br-executable "/opt/homebrew/bin/br"
-      bv-bv-executable "/opt/homebrew/bin/bv"
-      bv-default-workspace "~/src/project/")
+(setq beads-br-executable "/opt/homebrew/bin/br"
+      beads-bv-executable "/opt/homebrew/bin/bv"
+      beads-default-workspace "~/src/project/")
 ```
 
 Executable options must name programs Emacs can run. If `br` and `bv` work in a
@@ -127,10 +128,10 @@ terminal but not in Emacs, update `exec-path` or use absolute paths.
 
 ## Workspace selection
 
-Workspace selection uses the buffer-local `bv-workspace` first, then an explicit
-command argument, `bv-default-workspace`, and finally the nearest parent
-containing `.beads` or `_beads`. Set `bv-workspace` locally when one buffer
-should target another repository.
+Workspace selection uses the buffer-local `beads-workspace` first, then an
+explicit command argument, `beads-default-workspace`, and finally the nearest
+parent containing `.beads` or `_beads`. Set `beads-workspace` locally when one
+buffer should target another repository.
 
 All normal mutations go through `br`; analysis uses only `bv --robot-*`
 commands. The package never executes command strings returned by `bv` and never
@@ -152,5 +153,5 @@ the full suite before commits. See [Contributing](docs/contributing.md) and the
 
 ## License
 
-`bv-emacs` is free software licensed under the GNU General Public License,
+`beads-emacs` is free software licensed under the GNU General Public License,
 version 3 or (at your option) any later version. See [LICENSE](LICENSE).

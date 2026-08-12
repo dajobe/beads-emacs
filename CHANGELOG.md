@@ -8,6 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed the Emacs package, features, modules, commands, customization group,
+  variables, and installation directory to `beads`; retained `M-x bv` as a short
+  alias for `M-x beads`.
+
 ### Fixed
 
 - Made the help popup context-sensitive and kept it aligned with every direct
@@ -19,8 +25,8 @@ and this project adheres to
   right-aligned relative creation times.
 - Added in-place All, Open, Closed, Ready, Blocked, label, and search list
   filters matching the main `bv` filtering keys.
-- Added issue ID and title completion to interactive `bv-show` selection.
-- Added visual word wrapping to `bv-show` detail buffers.
+- Added issue ID and title completion to interactive `beads-show` selection.
+- Added visual word wrapping to `beads-show` detail buffers.
 - Added debounced automatic refresh after external Beads JSONL changes.
 - Added the initial Emacs 29+ interface to `br` and `bv`.
 - Added asynchronous issue lists, issue details, triage, planning, and mutation

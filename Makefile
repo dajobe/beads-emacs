@@ -6,13 +6,13 @@ EMACS := /Applications/Emacs.app/Contents/MacOS/Emacs
 endif
 endif
 
-EL_FILES := $(sort $(wildcard bv*.el))
+EL_FILES := $(sort $(wildcard beads*.el))
 ELC_FILES := $(EL_FILES:.el=.elc)
 TEST_FILES := $(sort $(wildcard tests/*.el))
-PACKAGE_FILE ?= bv.el
+PACKAGE_FILE ?= beads.el
 PACKAGE_USER_DIR ?= $(CURDIR)/.packages
 PREFIX ?= $(HOME)/.emacs.d
-INSTALL_DIR ?= $(PREFIX)/site-lisp/bv-emacs
+INSTALL_DIR ?= $(PREFIX)/site-lisp/beads
 GIT_HOOKS_DIR := $(shell git rev-parse --git-path hooks 2>/dev/null)
 
 .PHONY: all build test check checkdoc lint install clean \

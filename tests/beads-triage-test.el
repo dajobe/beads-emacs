@@ -1,26 +1,26 @@
-;;; bv-triage-test.el --- Tests for bv-triage  -*- lexical-binding: t; -*-
+;;; beads-triage-test.el --- Tests for beads-triage  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Dave Beckett
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (require 'test-helper)
-(require 'bv-triage)
-(require 'bv-transient)
+(require 'beads-triage)
+(require 'beads-transient)
 
-(ert-deftest bv-triage-direct-bindings-are-documented-in-command-menu ()
-  (dolist (binding '(("g" . bv-triage-refresh)
-                     ("t" . bv-triage)
-                     ("p" . bv-plan)
-                     ("o" . bv-next)
+(ert-deftest beads-triage-direct-bindings-are-documented-in-command-menu ()
+  (dolist (binding '(("g" . beads-triage-refresh)
+                     ("t" . beads-triage)
+                     ("p" . beads-plan)
+                     ("o" . beads-next)
                      ("n" . forward-button)
                      ("N" . backward-button)
                      ("RET" . push-button)))
     (should (eq (plist-get
-                 (nth 2 (transient-get-suffix 'bv-triage-menu (car binding)))
+                 (nth 2 (transient-get-suffix 'beads-triage-menu (car binding)))
                  :command)
                 (cdr binding)))))
 
-(defconst bv-triage-test--brief-json
+(defconst beads-triage-test--brief-json
   (concat
    "{\"quick_ref\":{\"open_count\":4,\"actionable_count\":2,"
    "\"blocked_count\":2,\"top_picks\":[{\"id\":\"bve-top\","
@@ -33,7 +33,7 @@
    "\"title\":\"Clear blocker\",\"blocked_by\":[\"bve-root\"]}]}" )
   "Representative top-level response from brief robot triage.")
 
-(defconst bv-triage-test--plan-json
+(defconst beads-triage-test--plan-json
   (concat
    "{\"plan\":{\"total_actionable\":2,\"total_blocked\":1,"
    "\"tracks\":[{\"track_id\":\"Track A\",\"reason\":\"Independent\","
@@ -45,26 +45,26 @@
    "\"impact_reason\":\"Clears the critical path\"}}}" )
   "Representative nested `plan.plan.tracks' response.")
 
-(ert-deftest bv-triage-arguments-use-only-robot-json-flags ()
+(ert-deftest beads-triage-arguments-use-only-robot-json-flags ()
   (with-temp-buffer
-    (bv-triage-mode)
-    (setq bv-triage-kind 'triage)
-    (should (equal (bv-triage--args)
+    (beads-triage-mode)
+    (setq beads-triage-kind 'triage)
+    (should (equal (beads-triage--args)
                    '("--robot-triage" "--brief" "--format" "json")))
-    (setq bv-triage-kind 'plan)
-    (should (equal (bv-triage--args)
+    (setq beads-triage-kind 'plan)
+    (should (equal (beads-triage--args)
                    '("--robot-plan" "--format" "json")))
-    (setq bv-triage-kind 'next)
-    (should (equal (bv-triage--args)
+    (setq beads-triage-kind 'next)
+    (should (equal (beads-triage--args)
                    '("--robot-next" "--format" "json")))
-    (setq bv-triage-kind 'unsupported)
-    (should-error (bv-triage--args))))
+    (setq beads-triage-kind 'unsupported)
+    (should-error (beads-triage--args))))
 
-(ert-deftest bv-triage-renders-top-level-brief-envelope ()
+(ert-deftest beads-triage-renders-top-level-brief-envelope ()
   (with-temp-buffer
-    (bv-triage-mode)
-    (setq-local bv-workspace default-directory)
-    (bv-triage-render 'triage (bv-test-json bv-triage-test--brief-json))
+    (beads-triage-mode)
+    (setq-local beads-workspace default-directory)
+    (beads-triage-render 'triage (beads-test-json beads-triage-test--brief-json))
     (let ((text (buffer-string)))
       (dolist (fragment '("Beads triage" "Overview" "Open:             4"
                           "Actionable:       2" "Blocked:          2"
@@ -78,13 +78,13 @@
     (search-forward "bve-top")
     (let ((button (button-at (1- (point)))))
       (should button)
-      (should (equal (button-get button 'bv-issue-id) "bve-top")))))
+      (should (equal (button-get button 'beads-issue-id) "bve-top")))))
 
-(ert-deftest bv-triage-renders-nested-plan-plan-tracks-envelope ()
+(ert-deftest beads-triage-renders-nested-plan-plan-tracks-envelope ()
   (with-temp-buffer
-    (bv-triage-mode)
-    (setq-local bv-workspace default-directory)
-    (bv-triage-render 'plan (bv-test-json bv-triage-test--plan-json))
+    (beads-triage-mode)
+    (setq-local beads-workspace default-directory)
+    (beads-triage-render 'plan (beads-test-json beads-triage-test--plan-json))
     (let ((text (buffer-string)))
       (dolist (fragment '("Beads execution plan" "Actionable:       2"
                           "Blocked:          1" "Track A" "Independent"
@@ -93,13 +93,13 @@
                           "Highest impact: bve-a" "Clears the critical path"))
         (should (string-match-p (regexp-quote fragment) text))))))
 
-(ert-deftest bv-triage-next-renders-reasons-from-installed-response ()
+(ert-deftest beads-triage-next-renders-reasons-from-installed-response ()
   (with-temp-buffer
-    (bv-triage-mode)
-    (setq-local bv-workspace default-directory)
-    (bv-triage-render
+    (beads-triage-mode)
+    (setq-local beads-workspace default-directory)
+    (beads-triage-render
      'next
-     (bv-test-json
+     (beads-test-json
       (concat
        "{\"id\":\"bve-next\",\"title\":\"Next work\",\"score\":0.9,"
        "\"reasons\":[\"Ready and high impact\","
@@ -112,23 +112,23 @@
                           "Fits the active scope"))
         (should (string-match-p (regexp-quote fragment) text))))))
 
-(ert-deftest bv-triage-next-renders-recommendation-envelope ()
+(ert-deftest beads-triage-next-renders-recommendation-envelope ()
   (with-temp-buffer
-    (bv-triage-mode)
-    (setq-local bv-workspace default-directory)
-    (bv-triage-render
+    (beads-triage-mode)
+    (setq-local beads-workspace default-directory)
+    (beads-triage-render
      'next
-     (bv-test-json
+     (beads-test-json
       "{\"recommendation\":{\"id\":\"bve-wrapped\",\"title\":\"Wrapped\",\"reason\":\"Top ranked\"}}"))
     (should (string-match-p "bve-wrapped  Wrapped" (buffer-string)))
     (should (string-match-p "Top ranked" (buffer-string)))))
 
-(ert-deftest bv-triage-next-renders-no-actionable-and-degraded-details ()
+(ert-deftest beads-triage-next-renders-no-actionable-and-degraded-details ()
   (with-temp-buffer
-    (bv-triage-mode)
-    (bv-triage-render
+    (beads-triage-mode)
+    (beads-triage-render
      'next
-     (bv-test-json
+     (beads-test-json
       (concat
        "{\"message\":\"No actionable issues\",\"degraded\":["
        "{\"message\":\"Graph data is incomplete\","
@@ -139,85 +139,85 @@
       (should (string-match-p "Graph data is incomplete" text))
       (should (string-match-p "Run br sync --flush-only" text))))
   (with-temp-buffer
-    (bv-triage-mode)
-    (bv-triage-render 'next (bv-test-json "{}"))
+    (beads-triage-mode)
+    (beads-triage-render 'next (beads-test-json "{}"))
     (should (string-match-p
              "No actionable recommendation is available"
              (buffer-string)))))
 
-(ert-deftest bv-triage-refresh-passes-exact-command-workspace-and-buffer ()
-  (bv-test-with-workspace
-    (with-temp-buffer
-      (bv-triage-mode)
-      (setq-local bv-workspace (file-name-as-directory (file-truename root)))
-      (setq-local bv-triage-kind 'plan)
-      (let (captured)
-        (cl-letf (((symbol-function 'bv-bv-async)
-                   (lambda (arguments callback _error workspace buffer)
-                     (setq captured (list arguments workspace buffer))
-                     (funcall callback
-                              (bv-test-json bv-triage-test--plan-json)))))
-          (bv-triage-refresh))
-        (should (equal (car captured)
-                       '("--robot-plan" "--format" "json")))
-        (should (equal (cadr captured) bv-workspace))
-        (should (eq (caddr captured) (current-buffer)))
-        (should-not bv-triage--busy)
-        (should (equal bv-triage-data
-                       (bv-test-json bv-triage-test--plan-json)))))))
+(ert-deftest beads-triage-refresh-passes-exact-command-workspace-and-buffer ()
+  (beads-test-with-workspace
+   (with-temp-buffer
+     (beads-triage-mode)
+     (setq-local beads-workspace (file-name-as-directory (file-truename root)))
+     (setq-local beads-triage-kind 'plan)
+     (let (captured)
+       (cl-letf (((symbol-function 'beads-bv-async)
+                  (lambda (arguments callback _error workspace buffer)
+                    (setq captured (list arguments workspace buffer))
+                    (funcall callback
+                             (beads-test-json beads-triage-test--plan-json)))))
+         (beads-triage-refresh))
+       (should (equal (car captured)
+                      '("--robot-plan" "--format" "json")))
+       (should (equal (cadr captured) beads-workspace))
+       (should (eq (caddr captured) (current-buffer)))
+       (should-not beads-triage--busy)
+       (should (equal beads-triage-data
+                      (beads-test-json beads-triage-test--plan-json)))))))
 
-(ert-deftest bv-triage-failure-clears-busy-and-keeps-old-data ()
+(ert-deftest beads-triage-failure-clears-busy-and-keeps-old-data ()
   (with-temp-buffer
-    (bv-triage-mode)
-    (setq-local bv-workspace default-directory)
-    (setq-local bv-triage-kind 'triage)
-    (setq bv-triage-data '(("old" . t)))
+    (beads-triage-mode)
+    (setq-local beads-workspace default-directory)
+    (setq-local beads-triage-kind 'triage)
+    (setq beads-triage-data '(("old" . t)))
     (let (reported)
       (cl-letf (((symbol-function 'message)
                  (lambda (format-string &rest arguments)
                    (setq reported (apply #'format format-string arguments))))
-                ((symbol-function 'bv-bv-async)
+                ((symbol-function 'beads-bv-async)
                  (lambda (_arguments _callback error-callback
-                          _workspace _buffer)
+                                     _workspace _buffer)
                    (funcall error-callback '(:stderr "analysis failed")))))
-        (bv-triage-refresh))
-      (should-not bv-triage--busy)
-      (should (equal bv-triage-data '(("old" . t))))
+        (beads-triage-refresh))
+      (should-not beads-triage--busy)
+      (should (equal beads-triage-data '(("old" . t))))
       (should (string-match-p "Beads analysis failed" reported)))))
 
-(ert-deftest bv-triage-button-opens-issue-in-buffer-workspace ()
+(ert-deftest beads-triage-button-opens-issue-in-buffer-workspace ()
   (with-temp-buffer
-    (setq-local bv-workspace "/tmp/project/")
+    (setq-local beads-workspace "/tmp/project/")
     (let (opened)
-      (cl-letf (((symbol-function 'bv-show)
+      (cl-letf (((symbol-function 'beads-show)
                  (lambda (id workspace) (setq opened (list id workspace))))
                 ((symbol-function 'button-get)
                  (lambda (_button property)
                    (pcase property
-                     ('bv-issue-id "bve-click")
-                     ('bv-workspace "/tmp/project/")))))
-        (bv-triage--issue-action 'button))
+                     ('beads-issue-id "bve-click")
+                     ('beads-workspace "/tmp/project/")))))
+        (beads-triage--issue-action 'button))
       (should (equal opened '("bve-click" "/tmp/project/"))))))
 
-(ert-deftest bv-triage-errors-outside-mode-and-for-unknown-render-kind ()
+(ert-deftest beads-triage-errors-outside-mode-and-for-unknown-render-kind ()
   (with-temp-buffer
-    (should-error (bv-triage-refresh) :type 'user-error)
-    (should-error (bv-triage-render 'unknown nil))))
+    (should-error (beads-triage-refresh) :type 'user-error)
+    (should-error (beads-triage-render 'unknown nil))))
 
-(ert-deftest bv-triage-open-watches-its-workspace ()
-  (bv-test-with-workspace
-    (let (buffer watched)
-      (unwind-protect
-          (cl-letf (((symbol-function 'bv-watch-workspace)
-                     (lambda (function)
-                       (setq watched (list (current-buffer) function))))
-                    ((symbol-function 'bv-triage-refresh) #'ignore)
-                    ((symbol-function 'pop-to-buffer) #'ignore))
-            (setq buffer (bv-triage--open 'triage root))
-            (should (equal watched (list buffer #'bv-triage-refresh))))
-        (when (buffer-live-p buffer)
-          (kill-buffer buffer))))))
+(ert-deftest beads-triage-open-watches-its-workspace ()
+  (beads-test-with-workspace
+   (let (buffer watched)
+     (unwind-protect
+         (cl-letf (((symbol-function 'beads-watch-workspace)
+                    (lambda (function)
+                      (setq watched (list (current-buffer) function))))
+                   ((symbol-function 'beads-triage-refresh) #'ignore)
+                   ((symbol-function 'pop-to-buffer) #'ignore))
+           (setq buffer (beads-triage--open 'triage root))
+           (should (equal watched (list buffer #'beads-triage-refresh))))
+       (when (buffer-live-p buffer)
+         (kill-buffer buffer))))))
 
-(provide 'bv-triage-test)
+(provide 'beads-triage-test)
 
-;;; bv-triage-test.el ends here
+;;; beads-triage-test.el ends here

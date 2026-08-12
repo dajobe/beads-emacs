@@ -118,7 +118,8 @@ asked," that rule overrides any generic workflow advice.
 ## Project checks
 
 - Target Emacs 29.1 or newer and use lexical binding in every Emacs Lisp file.
-- Keep every package symbol under the `bv-` prefix.
+- Keep every package symbol under the `beads-` prefix, except the intentional
+  short `bv` command alias for `beads`.
 - Pass `br` and `bv` arguments directly to `process-file` or `make-process`;
   never construct a shell command or edit Beads data files directly.
 - Run `make check` and `git diff --check` after code changes. Run `make clean`

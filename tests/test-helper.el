@@ -1,29 +1,29 @@
-;;; test-helper.el --- Shared helpers for bv tests  -*- lexical-binding: t; -*-
+;;; test-helper.el --- Shared helpers for Beads tests  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Dave Beckett
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (require 'ert)
 (require 'cl-lib)
-(require 'bv)
+(require 'beads)
 
-(defmacro bv-test-with-workspace (&rest body)
+(defmacro beads-test-with-workspace (&rest body)
   "Run BODY in an isolated temporary Beads workspace."
   (declare (indent 0) (debug t))
-  `(let ((root (make-temp-file "bv-test-" t)))
+  `(let ((root (make-temp-file "beads-test-" t)))
      (unwind-protect
          (progn
            (make-directory (expand-file-name ".beads" root))
            (let ((default-directory root)
-                 (bv-workspace nil)
-                 (bv-default-workspace nil)
-                 (bv-database-file nil))
+                 (beads-workspace nil)
+                 (beads-default-workspace nil)
+                 (beads-database-file nil))
              ,@body))
        (delete-directory root t))))
 
-(defun bv-test-json (text)
+(defun beads-test-json (text)
   "Decode JSON TEXT through the package boundary."
-  (bv-json-decode text))
+  (beads-json-decode text))
 
 (provide 'test-helper)
 

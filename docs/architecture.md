@@ -2,24 +2,26 @@
 
 ## Purpose
 
-`bv-emacs` is an Emacs 29+ interface to the Beads tools. `br` owns issue storage
-and mutations; `bv` supplies graph-aware analysis and triage. The package does
-not edit Beads JSONL or SQLite data directly.
+`beads-emacs` is an Emacs 29+ interface to the Beads tools. `br` owns issue
+storage and mutations; `bv` supplies graph-aware analysis and triage. The
+package does not edit Beads JSONL or SQLite data directly.
 
 ## Package layout
 
-- `bv-core.el` discovers workspaces, runs commands, decodes JSON, and reports
+- `beads-core.el` discovers workspaces, runs commands, decodes JSON, and reports
   subprocess failures.
-- `bv-list.el` provides tabulated issue, ready, blocked, and search views.
-- `bv-show.el` renders a navigable issue detail buffer.
-- `bv-triage.el` renders `bv` triage and planning results.
-- `bv-edit.el` implements create, update, claim, close, reopen, defer, comment,
-  label, and dependency workflows.
-- `bv-transient.el` provides the discoverable command menu.
-- `bv.el` is the package entry point and public `M-x bv` command.
+- `beads-list.el` provides tabulated issue, ready, blocked, and search views.
+- `beads-show.el` renders a navigable issue detail buffer.
+- `beads-triage.el` renders `bv` triage and planning results.
+- `beads-edit.el` implements create, update, claim, close, reopen, defer,
+  comment, label, and dependency workflows.
+- `beads-transient.el` provides the discoverable command menu.
+- `beads.el` is the package entry point and public `M-x beads` command. `M-x bv`
+  is its short alias.
 
-Every package symbol uses the `bv-` prefix. Files may depend on `bv-core`, but
-the core layer must not depend on a user-interface module.
+Every package symbol uses the `beads-` prefix, except the intentional short `bv`
+command alias for `beads`. Files may depend on `beads-core`, but the core layer
+must not depend on a user-interface module.
 
 ## Command boundary
 
@@ -47,9 +49,9 @@ show command's single-element array are handled explicitly.
 
 The current workspace is determined in this order:
 
-1. The buffer-local `bv-workspace` value.
+1. The buffer-local `beads-workspace` value.
 2. An explicit directory supplied to the command.
-3. The customizable `bv-default-workspace` value.
+3. The customizable `beads-default-workspace` value.
 4. The nearest parent directory containing `.beads` or `_beads`.
 
 The selected path is normalized to the repository root. Commands pass the
@@ -59,7 +61,7 @@ repositories never share stale data.
 
 ## User interface
 
-`M-x bv` opens the main issue list. It derives from `tabulated-list-mode`,
+`M-x beads` opens the main issue list. It derives from `tabulated-list-mode`,
 preserves the selected issue across refreshes, and initially shows priority,
 status, type, ID, title, and assignee. Ready, blocked, all, and search views use
 the same renderer.

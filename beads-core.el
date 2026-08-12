@@ -1,4 +1,4 @@
-;;; bv-core.el --- Process and workspace support for Beads  -*- lexical-binding: t; -*-
+;;; beads-core.el --- Process and workspace support for Beads  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Dave Beckett
 ;; SPDX-License-Identifier: GPL-3.0-or-later
@@ -22,64 +22,64 @@
 (require 'seq)
 (require 'subr-x)
 
-(defgroup bv nil
+(defgroup beads nil
   "Emacs interface to the Beads tools."
   :group 'tools)
 
-(defcustom bv-br-executable "br"
+(defcustom beads-br-executable "br"
   "Name or absolute path of the br executable."
   :type 'file)
 
-(defcustom bv-bv-executable "bv"
+(defcustom beads-bv-executable "bv"
   "Name or absolute path of the bv executable."
   :type 'file)
 
-(defcustom bv-default-workspace nil
+(defcustom beads-default-workspace nil
   "Default Beads workspace directory.
 When nil, discover a workspace from `default-directory'."
   :type '(choice (const :tag "Discover from current directory" nil)
                  directory))
 
-(defcustom bv-database-file nil
+(defcustom beads-database-file nil
   "Explicit Beads database passed to commands with --db.
 The path may be absolute or relative to the selected workspace."
   :type '(choice (const :tag "Use workspace default" nil) file))
 
-(defcustom bv-error-buffer-name "*bv errors*"
+(defcustom beads-error-buffer-name "*Beads errors*"
   "Name of the buffer containing subprocess diagnostics."
   :type 'string)
 
-(defcustom bv-auto-refresh-on-change t
+(defcustom beads-auto-refresh-on-change t
   "Whether visible Beads buffers refresh after external JSONL changes."
   :type 'boolean)
 
-(defcustom bv-auto-refresh-delay 0.25
+(defcustom beads-auto-refresh-delay 0.25
   "Seconds to debounce automatic refreshes after Beads JSONL changes."
   :type 'number)
 
-(defvar-local bv-workspace nil
+(defvar-local beads-workspace nil
   "Workspace explicitly associated with the current buffer.")
 
-(defvar-local bv--active-process nil)
-(defvar-local bv--request-generation 0)
-(defvar-local bv--file-watch nil)
-(defvar-local bv--rewatch-needed nil)
-(defvar-local bv--auto-refresh-timer nil)
+(defvar-local beads--active-process nil)
+(defvar-local beads--request-generation 0)
+(defvar-local beads--file-watch nil)
+(defvar-local beads--rewatch-needed nil)
+(defvar-local beads--auto-refresh-timer nil)
 
-(defvar bv-before-refresh-hook nil
+(defvar beads-before-refresh-hook nil
   "Hook run in the target buffer before an asynchronous command starts.")
 
-(defvar bv-after-refresh-hook nil
+(defvar beads-after-refresh-hook nil
   "Hook run in the target buffer after an asynchronous command succeeds.")
 
-(defvar bv-refresh-error-hook nil
+(defvar beads-refresh-error-hook nil
   "Hook run in the target buffer after an asynchronous command fails.")
 
-(define-error 'bv-command-error "Beads command failed")
-(define-error 'bv-json-error "Invalid JSON from a Beads command"
-  'bv-command-error)
+(define-error 'beads-command-error "Beads command failed")
+(define-error 'beads-json-error "Invalid JSON from a Beads command"
+              'beads-command-error)
 
-(defun bv--marker-directory (directory)
+(defun beads--marker-directory (directory)
   "Return the workspace containing DIRECTORY, or nil."
   (let ((directory (file-name-as-directory (expand-file-name directory))))
     (locate-dominating-file
@@ -88,33 +88,33 @@ The path may be absolute or relative to the selected workspace."
        (or (file-directory-p (expand-file-name ".beads" candidate))
            (file-directory-p (expand-file-name "_beads" candidate)))))))
 
-(defun bv-workspace-root (&optional directory)
+(defun beads-workspace-root (&optional directory)
   "Return the normalized Beads workspace root for DIRECTORY.
-Selection prefers buffer-local `bv-workspace', then DIRECTORY,
-`bv-default-workspace', and finally discovery above `default-directory'.
+Selection prefers buffer-local `beads-workspace', then DIRECTORY,
+`beads-default-workspace', and finally discovery above `default-directory'.
 Signal `user-error' when no workspace can be found."
-  (let* ((selected (or bv-workspace directory bv-default-workspace
+  (let* ((selected (or beads-workspace directory beads-default-workspace
                        default-directory))
-         (root (bv--marker-directory selected)))
+         (root (beads--marker-directory selected)))
     (unless root
       (user-error "No Beads workspace found from %s" selected))
     (file-name-as-directory (file-truename root))))
 
-(defun bv--beads-directory (workspace)
+(defun beads--beads-directory (workspace)
   "Return the Beads data directory inside WORKSPACE, or nil."
   (seq-find #'file-directory-p
             (mapcar (lambda (name) (expand-file-name name workspace))
                     '(".beads" "_beads"))))
 
-(defun bv--issues-watch-target (workspace)
+(defun beads--issues-watch-target (workspace)
   "Return the best file notification target for WORKSPACE."
-  (when-let* ((directory (bv--beads-directory workspace)))
+  (when-let* ((directory (beads--beads-directory workspace)))
     (or (seq-find #'file-exists-p
                   (mapcar (lambda (name) (expand-file-name name directory))
                           '("issues.jsonl" "beads.jsonl")))
         directory)))
 
-(defun bv--jsonl-change-event-p (event)
+(defun beads--jsonl-change-event-p (event)
   "Return non-nil when file notification EVENT concerns issue JSONL."
   (and (not (eq (cadr event) 'stopped))
        (seq-some
@@ -124,97 +124,97 @@ Signal `user-error' when no workspace can be found."
                        '("issues.jsonl" "beads.jsonl"))))
         (cddr event))))
 
-(defun bv--auto-refresh-now (buffer refresh-function)
+(defun beads--auto-refresh-now (buffer refresh-function)
   "Refresh BUFFER with REFRESH-FUNCTION when it is visible and idle."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (setq bv--auto-refresh-timer nil)
-      (when (and bv-auto-refresh-on-change bv--rewatch-needed)
-        (setq bv--rewatch-needed nil)
-        (let ((descriptor bv--file-watch))
-          (setq bv--file-watch nil)
+      (setq beads--auto-refresh-timer nil)
+      (when (and beads-auto-refresh-on-change beads--rewatch-needed)
+        (setq beads--rewatch-needed nil)
+        (let ((descriptor beads--file-watch))
+          (setq beads--file-watch nil)
           (when descriptor
             (ignore-errors (file-notify-rm-watch descriptor))))
-        (bv--add-workspace-watch buffer refresh-function))
-      (when (and bv-auto-refresh-on-change
+        (beads--add-workspace-watch buffer refresh-function))
+      (when (and beads-auto-refresh-on-change
                  (get-buffer-window buffer t))
-        (if (process-live-p bv--active-process)
-            (bv--schedule-auto-refresh buffer refresh-function)
+        (if (process-live-p beads--active-process)
+            (beads--schedule-auto-refresh buffer refresh-function)
           (funcall refresh-function))))))
 
-(defun bv--schedule-auto-refresh (buffer refresh-function)
+(defun beads--schedule-auto-refresh (buffer refresh-function)
   "Schedule a debounced REFRESH-FUNCTION call for BUFFER."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (when (timerp bv--auto-refresh-timer)
-        (cancel-timer bv--auto-refresh-timer))
-      (setq bv--auto-refresh-timer
-            (run-at-time bv-auto-refresh-delay nil
-                         #'bv--auto-refresh-now buffer refresh-function)))))
+      (when (timerp beads--auto-refresh-timer)
+        (cancel-timer beads--auto-refresh-timer))
+      (setq beads--auto-refresh-timer
+            (run-at-time beads-auto-refresh-delay nil
+                         #'beads--auto-refresh-now buffer refresh-function)))))
 
-(defun bv--file-watch-callback (buffer refresh-function event)
+(defun beads--file-watch-callback (buffer refresh-function event)
   "Handle Beads file notification EVENT for BUFFER.
 REFRESH-FUNCTION refreshes the owning UI buffer."
   (when (buffer-live-p buffer)
-    (when (bv--jsonl-change-event-p event)
-      (bv--schedule-auto-refresh buffer refresh-function))
+    (when (beads--jsonl-change-event-p event)
+      (beads--schedule-auto-refresh buffer refresh-function))
     (when (and (memq (cadr event) '(created deleted renamed))
                (with-current-buffer buffer
-                 (equal (car event) bv--file-watch)))
+                 (equal (car event) beads--file-watch)))
       (with-current-buffer buffer
-        (setq bv--rewatch-needed t)
+        (setq beads--rewatch-needed t)
         (unless (eq (cadr event) 'created)
-          (setq bv--file-watch nil))))))
+          (setq beads--file-watch nil))))))
 
-(defun bv--add-workspace-watch (buffer refresh-function)
+(defun beads--add-workspace-watch (buffer refresh-function)
   "Add BUFFER's file watch and arrange to call REFRESH-FUNCTION later."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (when-let* ((target (and bv-workspace
-                              (bv--issues-watch-target bv-workspace))))
+      (when-let* ((target (and beads-workspace
+                               (beads--issues-watch-target beads-workspace))))
         (condition-case nil
-            (setq bv--file-watch
+            (setq beads--file-watch
                   (file-notify-add-watch
                    target '(change attribute-change)
                    (lambda (event)
-                     (bv--file-watch-callback
+                     (beads--file-watch-callback
                       buffer refresh-function event))))
           ((file-notify-error file-error)
-           (setq bv--file-watch nil)))))))
+           (setq beads--file-watch nil)))))))
 
-(defun bv-unwatch-workspace ()
+(defun beads-unwatch-workspace ()
   "Remove file notification and refresh timer owned by this buffer."
-  (when (timerp bv--auto-refresh-timer)
-    (cancel-timer bv--auto-refresh-timer))
-  (setq bv--auto-refresh-timer nil)
-  (setq bv--rewatch-needed nil)
-  (let ((descriptor bv--file-watch))
-    (setq bv--file-watch nil)
+  (when (timerp beads--auto-refresh-timer)
+    (cancel-timer beads--auto-refresh-timer))
+  (setq beads--auto-refresh-timer nil)
+  (setq beads--rewatch-needed nil)
+  (let ((descriptor beads--file-watch))
+    (setq beads--file-watch nil)
     (when descriptor
       (ignore-errors (file-notify-rm-watch descriptor)))))
 
-(defun bv-watch-workspace (refresh-function)
+(defun beads-watch-workspace (refresh-function)
   "Watch the current workspace and call REFRESH-FUNCTION after JSONL writes.
 
 File notification failures are non-fatal because manual refresh remains
 available.  Return the watch descriptor, or nil when watching is unavailable."
-  (bv-unwatch-workspace)
-  (when bv-auto-refresh-on-change
-    (bv--add-workspace-watch (current-buffer) refresh-function))
-  (when bv--file-watch
-    (add-hook 'kill-buffer-hook #'bv-unwatch-workspace nil t))
-  bv--file-watch)
+  (beads-unwatch-workspace)
+  (when beads-auto-refresh-on-change
+    (beads--add-workspace-watch (current-buffer) refresh-function))
+  (when beads--file-watch
+    (add-hook 'kill-buffer-hook #'beads-unwatch-workspace nil t))
+  beads--file-watch)
 
-(defun bv--normalize-json (value)
+(defun beads--normalize-json (value)
   "Normalize JSON VALUE recursively to lists and string-keyed alists."
   (cond
    ((hash-table-p value)
     (map-apply (lambda (key item)
                  (cons (if (symbolp key) (symbol-name key) key)
-                       (bv--normalize-json item)))
+                       (beads--normalize-json item)))
                value))
    ((vectorp value)
-    (mapcar #'bv--normalize-json (append value nil)))
+    (mapcar #'beads--normalize-json (append value nil)))
    ((and (listp value)
          (or (null value)
              (and (consp (car value))
@@ -224,29 +224,29 @@ available.  Return the watch descriptor, or nil when watching is unavailable."
                   (cons (if (symbolp (car entry))
                             (symbol-name (car entry))
                           (car entry))
-                        (bv--normalize-json (cdr entry)))
-                (bv--normalize-json entry)))
+                        (beads--normalize-json (cdr entry)))
+                (beads--normalize-json entry)))
             value))
-   ((listp value) (mapcar #'bv--normalize-json value))
+   ((listp value) (mapcar #'beads--normalize-json value))
    (t value)))
 
-(defun bv-json-decode (text)
+(defun beads-json-decode (text)
   "Decode TEXT and return normalized JSON data.
 Objects use string keys, arrays use lists, JSON null becomes nil, and JSON
 false remains distinguishable as `:json-false'."
   (condition-case error-data
-      (bv--normalize-json
+      (beads--normalize-json
        (json-parse-string text
                           :object-type 'alist
                           :array-type 'list
                           :null-object nil
                           :false-object :json-false))
     (json-parse-error
-     (signal 'bv-json-error
+     (signal 'beads-json-error
              (list (list :message (error-message-string error-data)
                          :output text))))))
 
-(defun bv-object-get (object key &optional default)
+(defun beads-object-get (object key &optional default)
   "Return KEY from JSON OBJECT, or DEFAULT when it is absent.
 KEY may be a symbol or string and OBJECT may have either kind of key."
   (let* ((string-key (if (symbolp key) (symbol-name key) key))
@@ -266,33 +266,33 @@ KEY may be a symbol or string and OBJECT may have either kind of key."
            (t missing))))
     (if (eq value missing) default value)))
 
-(defun bv-object-member-p (object key)
+(defun beads-object-member-p (object key)
   "Return non-nil when JSON OBJECT contain KEY, even when its value is nil."
   (let ((missing (make-symbol "missing")))
-    (not (eq (bv-object-get object key missing) missing))))
+    (not (eq (beads-object-get object key missing) missing))))
 
-(defun bv-json-issues (data)
+(defun beads-json-issues (data)
   "Return the issue list represented by decoded DATA.
 Handle a list response, a single issue object, and the `issues' envelope used
 by some br versions."
   (cond
-   ((bv-object-member-p data "issues") (bv-object-get data "issues"))
-   ((bv-object-member-p data "id") (list data))
+   ((beads-object-member-p data "issues") (beads-object-get data "issues"))
+   ((beads-object-member-p data "id") (list data))
    ((or (null data)
         (and (listp data) (consp (car data))
              (not (stringp (caar data)))))
     data)
-   (t (signal 'bv-json-error
+   (t (signal 'beads-json-error
               (list (list :message "Expected issue JSON" :output data))))))
 
-(defun bv--database-arguments (workspace)
+(defun beads--database-arguments (workspace)
   "Return database arguments appropriate for WORKSPACE."
-  (when bv-database-file
-    (list "--db" (expand-file-name bv-database-file workspace))))
+  (when beads-database-file
+    (list "--db" (expand-file-name beads-database-file workspace))))
 
-(defun bv--record-error (data)
-  "Append subprocess error DATA to `bv-error-buffer-name'."
-  (with-current-buffer (get-buffer-create bv-error-buffer-name)
+(defun beads--record-error (data)
+  "Append subprocess error DATA to `beads-error-buffer-name'."
+  (with-current-buffer (get-buffer-create beads-error-buffer-name)
     (goto-char (point-max))
     (insert (format-time-string "\n[%Y-%m-%d %H:%M:%S] "))
     (insert (format "%s %S\nexit: %S\nstderr:\n%s\nstdout:\n%s\n"
@@ -302,19 +302,19 @@ by some br versions."
                     (or (plist-get data :stderr) "")
                     (or (plist-get data :stdout) "")))))
 
-(defun bv-command-sync (program arguments &optional workspace)
+(defun beads-command-sync (program arguments &optional workspace)
   "Run PROGRAM synchronously with ARGUMENTS and decode its JSON output.
-WORKSPACE defaults to `bv-workspace-root'.  Signal `bv-command-error' with a
-diagnostic plist on failure."
+WORKSPACE defaults to `beads-workspace-root'.  Signal
+`beads-command-error' with a diagnostic plist on failure."
   (declare (indent 1))
   (unless (and (stringp program) (listp arguments)
                (seq-every-p #'stringp arguments))
     (error "PROGRAM must be a string and ARGUMENTS a list of strings"))
-  (let* ((root (bv-workspace-root workspace))
+  (let* ((root (beads-workspace-root workspace))
          (default-directory root)
-         (arguments (append (bv--database-arguments root) arguments))
-         (stdout (generate-new-buffer " *bv stdout*"))
-         (stderr-file (make-temp-file "bv-stderr-"))
+         (arguments (append (beads--database-arguments root) arguments))
+         (stdout (generate-new-buffer " *Beads stdout*"))
+         (stderr-file (make-temp-file "beads-stderr-"))
          status stderr output)
     (unwind-protect
         (progn
@@ -331,44 +331,44 @@ diagnostic plist on failure."
                    output "")))
           (if (and (integerp status) (zerop status))
               (condition-case json-error
-                  (bv-json-decode output)
-                (bv-json-error
+                  (beads-json-decode output)
+                (beads-json-error
                  (let ((data (list :program program :arguments arguments
                                    :workspace root :status status
                                    :stdout output :stderr stderr
                                    :json-error (cadr json-error))))
-                   (bv--record-error data)
-                   (signal 'bv-json-error (list data)))))
+                   (beads--record-error data)
+                   (signal 'beads-json-error (list data)))))
             (let ((data (list :program program :arguments arguments
                               :workspace root :status status
                               :stdout output :stderr stderr)))
-              (bv--record-error data)
-              (signal 'bv-command-error (list data)))))
+              (beads--record-error data)
+              (signal 'beads-command-error (list data)))))
       (kill-buffer stdout)
       (delete-file stderr-file))))
 
-(defun bv-br-sync (arguments &optional workspace)
+(defun beads-br-sync (arguments &optional workspace)
   "Run br synchronously with ARGUMENTS in WORKSPACE and decode JSON."
-  (bv-command-sync bv-br-executable arguments workspace))
+  (beads-command-sync beads-br-executable arguments workspace))
 
-(defun bv-bv-sync (arguments &optional workspace)
+(defun beads-bv-sync (arguments &optional workspace)
   "Run bv synchronously with ARGUMENTS in WORKSPACE and decode JSON."
-  (bv-command-sync bv-bv-executable arguments workspace))
+  (beads-command-sync beads-bv-executable arguments workspace))
 
-(defun bv-cancel-request (&optional buffer)
+(defun beads-cancel-request (&optional buffer)
   "Cancel the active asynchronous request owned by BUFFER.
 BUFFER defaults to the current buffer."
   (with-current-buffer (or buffer (current-buffer))
-    (when (process-live-p bv--active-process)
-      (delete-process bv--active-process))
-    (setq bv--active-process nil)))
+    (when (process-live-p beads--active-process)
+      (delete-process beads--active-process))
+    (setq beads--active-process nil)))
 
-(defun bv--kill-owned-process ()
+(defun beads--kill-owned-process ()
   "Cancel the process owned by the current buffer."
-  (bv-cancel-request (current-buffer)))
+  (beads-cancel-request (current-buffer)))
 
-(defun bv--async-finished (process target generation program arguments root
-                                   stdout stderr callback error-callback)
+(defun beads--async-finished (process target generation program arguments root
+                                      stdout stderr callback error-callback)
   "Handle completion of an asynchronous Beads PROCESS.
 TARGET is the owning buffer and GENERATION identifies the request.  PROGRAM,
 ARGUMENTS, and ROOT describe the invocation; STDOUT and STDERR are its output
@@ -382,9 +382,9 @@ buffers.  CALLBACK handles success and ERROR-CALLBACK handles failure."
       (unwind-protect
           (when (and (buffer-live-p target)
                      (with-current-buffer target
-                       (= generation bv--request-generation)))
+                       (= generation beads--request-generation)))
             (with-current-buffer target
-              (setq bv--active-process nil)
+              (setq beads--active-process nil)
               (let ((failure
                      (list :program program :arguments arguments
                            :workspace root :status status
@@ -392,52 +392,52 @@ buffers.  CALLBACK handles success and ERROR-CALLBACK handles failure."
                 (if (zerop status)
                     (condition-case json-error
                         (progn
-                          (funcall callback (bv-json-decode output))
-                          (run-hooks 'bv-after-refresh-hook))
-                      (bv-command-error
+                          (funcall callback (beads-json-decode output))
+                          (run-hooks 'beads-after-refresh-hook))
+                      (beads-command-error
                        (setq failure
                              (append failure
                                      (list :json-error (cadr json-error))))
-                       (bv--record-error failure)
+                       (beads--record-error failure)
                        (when error-callback (funcall error-callback failure))
-                       (run-hooks 'bv-refresh-error-hook)))
-                  (bv--record-error failure)
+                       (run-hooks 'beads-refresh-error-hook)))
+                  (beads--record-error failure)
                   (when error-callback (funcall error-callback failure))
-                  (run-hooks 'bv-refresh-error-hook)))))
+                  (run-hooks 'beads-refresh-error-hook)))))
         (when (buffer-live-p stdout) (kill-buffer stdout))
         (when (buffer-live-p stderr) (kill-buffer stderr))))))
 
-(defun bv-command-async (program arguments callback
-                                 &optional error-callback workspace buffer)
+(defun beads-command-async (program arguments callback
+                                    &optional error-callback workspace buffer)
   "Run PROGRAM asynchronously with ARGUMENTS and decode its JSON output.
 CALLBACK receives decoded data in BUFFER, which defaults to the current
-buffer.  ERROR-CALLBACK receives the `bv-command-error' diagnostic plist.
+buffer.  ERROR-CALLBACK receives the `beads-command-error' diagnostic plist.
 WORKSPACE selects the command directory explicitly.
 A newer request in the same buffer supersedes this one.  Return the process."
   (unless (and (stringp program) (listp arguments)
                (seq-every-p #'stringp arguments))
     (error "PROGRAM must be a string and ARGUMENTS a list of strings"))
   (let* ((target (or buffer (current-buffer)))
-         (root (with-current-buffer target (bv-workspace-root workspace)))
-         (argv (append (bv--database-arguments root) arguments))
-         (stdout (generate-new-buffer " *bv async stdout*"))
-         (stderr (generate-new-buffer " *bv async stderr*"))
+         (root (with-current-buffer target (beads-workspace-root workspace)))
+         (argv (append (beads--database-arguments root) arguments))
+         (stdout (generate-new-buffer " *Beads async stdout*"))
+         (stderr (generate-new-buffer " *Beads async stderr*"))
          generation process)
     (with-current-buffer target
-      (setq generation (cl-incf bv--request-generation))
-      (bv-cancel-request target)
-      (add-hook 'kill-buffer-hook #'bv--kill-owned-process nil t)
-      (run-hooks 'bv-before-refresh-hook))
+      (setq generation (cl-incf beads--request-generation))
+      (beads-cancel-request target)
+      (add-hook 'kill-buffer-hook #'beads--kill-owned-process nil t)
+      (run-hooks 'beads-before-refresh-hook))
     (let ((default-directory root))
       (condition-case process-error
           (setq process
                 (make-process
-                 :name (format "bv-%d" generation)
+                 :name (format "beads-%d" generation)
                  :buffer stdout :stderr stderr :noquery t
                  :command (cons program argv)
                  :sentinel
                  (lambda (proc _event)
-                   (bv--async-finished
+                   (beads--async-finished
                     proc target generation program argv root stdout stderr
                     callback error-callback))))
         (file-error
@@ -447,27 +447,27 @@ A newer request in the same buffer supersedes this one.  Return the process."
            (kill-buffer stdout)
            (kill-buffer stderr)
            (with-current-buffer target
-             (when (= generation bv--request-generation)
-               (setq bv--active-process nil)
-               (bv--record-error data)
+             (when (= generation beads--request-generation)
+               (setq beads--active-process nil)
+               (beads--record-error data)
                (when error-callback (funcall error-callback data))
-               (run-hooks 'bv-refresh-error-hook)))
-           (signal 'bv-command-error (list data))))))
-    (with-current-buffer target (setq bv--active-process process))
+               (run-hooks 'beads-refresh-error-hook)))
+           (signal 'beads-command-error (list data))))))
+    (with-current-buffer target (setq beads--active-process process))
     process))
 
-(defun bv-br-async (arguments callback &optional error-callback workspace buffer)
+(defun beads-br-async (arguments callback &optional error-callback workspace buffer)
   "Run br asynchronously with ARGUMENTS, invoking CALLBACK with JSON data.
-ERROR-CALLBACK, WORKSPACE, and BUFFER are as in `bv-command-async'."
-  (bv-command-async bv-br-executable arguments callback
-                    error-callback workspace buffer))
+ERROR-CALLBACK, WORKSPACE, and BUFFER are as in `beads-command-async'."
+  (beads-command-async beads-br-executable arguments callback
+                       error-callback workspace buffer))
 
-(defun bv-bv-async (arguments callback &optional error-callback workspace buffer)
+(defun beads-bv-async (arguments callback &optional error-callback workspace buffer)
   "Run bv asynchronously with ARGUMENTS, invoking CALLBACK with JSON data.
-ERROR-CALLBACK, WORKSPACE, and BUFFER are as in `bv-command-async'."
-  (bv-command-async bv-bv-executable arguments callback
-                    error-callback workspace buffer))
+ERROR-CALLBACK, WORKSPACE, and BUFFER are as in `beads-command-async'."
+  (beads-command-async beads-bv-executable arguments callback
+                       error-callback workspace buffer))
 
-(provide 'bv-core)
+(provide 'beads-core)
 
-;;; bv-core.el ends here
+;;; beads-core.el ends here

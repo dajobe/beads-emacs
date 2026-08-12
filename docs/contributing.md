@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions to `bv-emacs` are welcome. Keep changes focused, preserve the
+Contributions to `beads-emacs` are welcome. Keep changes focused, preserve the
 separation between `br` mutations and `bv` analysis, and include regression
 coverage for behavior changes.
 
@@ -61,7 +61,7 @@ CI runs the same suite on Emacs 29 and Emacs 30.
 
 ## Design constraints
 
-- Prefix package symbols with `bv-`.
+- Prefix package symbols with `beads-`.
 - Pass commands as argument lists to `make-process` or `process-file`; do not
   construct shell commands.
 - Request and decode JSON for all machine-readable `br` and `bv` output.
