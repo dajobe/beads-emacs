@@ -5,6 +5,24 @@
 
 (require 'test-helper)
 (require 'bv-show)
+(require 'bv-transient)
+
+(ert-deftest bv-show-direct-bindings-are-documented-in-command-menu ()
+  (dolist (binding '(("g" . bv-show-refresh)
+                     ("e" . bv-update)
+                     ("C" . bv-claim)
+                     ("x" . bv-close)
+                     ("R" . bv-reopen)
+                     ("d" . bv-defer)
+                     ("c" . bv-add-comment)
+                     ("l a" . bv-add-label)
+                     ("l r" . bv-remove-label)
+                     ("D a" . bv-add-dependency)
+                     ("D r" . bv-remove-dependency)))
+    (should (eq (plist-get
+                 (nth 2 (transient-get-suffix 'bv-show-menu (car binding)))
+                 :command)
+                (cdr binding)))))
 
 (defconst bv-show-test--issue-json
   (concat

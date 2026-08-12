@@ -5,6 +5,20 @@
 
 (require 'test-helper)
 (require 'bv-triage)
+(require 'bv-transient)
+
+(ert-deftest bv-triage-direct-bindings-are-documented-in-command-menu ()
+  (dolist (binding '(("g" . bv-triage-refresh)
+                     ("t" . bv-triage)
+                     ("p" . bv-plan)
+                     ("o" . bv-next)
+                     ("n" . forward-button)
+                     ("N" . backward-button)
+                     ("RET" . push-button)))
+    (should (eq (plist-get
+                 (nth 2 (transient-get-suffix 'bv-triage-menu (car binding)))
+                 :command)
+                (cdr binding)))))
 
 (defconst bv-triage-test--brief-json
   (concat

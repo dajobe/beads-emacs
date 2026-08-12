@@ -4,6 +4,27 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (require 'test-helper)
+(require 'bv-transient)
+
+(ert-deftest bv-menu-selects-the-current-buffer-menu ()
+  (let (selected)
+    (cl-letf (((symbol-function 'bv-list-menu)
+               (lambda () (interactive) (setq selected 'list)))
+              ((symbol-function 'bv-show-menu)
+               (lambda () (interactive) (setq selected 'show)))
+              ((symbol-function 'bv-triage-menu)
+               (lambda () (interactive) (setq selected 'triage)))
+              ((symbol-function 'bv-general-menu)
+               (lambda () (interactive) (setq selected 'general))))
+      (dolist (case '((bv-list-mode . list)
+                      (bv-show-mode . show)
+                      (bv-triage-mode . triage)
+                      (fundamental-mode . general)))
+        (with-temp-buffer
+          (setq selected nil)
+          (funcall (car case))
+          (bv-menu)
+          (should (eq selected (cdr case))))))))
 
 (ert-deftest bv-version-string-uses-version-argv-and-trims-output ()
   (let (captured)

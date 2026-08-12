@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- Made the help popup context-sensitive and kept it aligned with every direct
+  binding in list, issue-detail, and analysis buffers.
+
 ### Added
 
 - Added responsive issue rows with type icons, compact states, titles, and

@@ -88,7 +88,8 @@ to spot without requiring rigid, wide columns.
 
 The shorter `bv-ready`, `bv-blocked`, and `bv-search` commands are aliases for
 their corresponding `bv-list-*` commands. `bv-transient` is an alias for
-`bv-menu`.
+`bv-menu`. The `?` popup adapts to list, issue-detail, and analysis buffers so
+its current-buffer section documents the bindings that work there.
 
 List and detail buffers display their available bindings through `C-h m`. Common
 navigation follows normal Emacs conventions: `RET` visits the issue at point,

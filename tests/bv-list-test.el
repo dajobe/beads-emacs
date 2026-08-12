@@ -5,6 +5,7 @@
 
 (require 'test-helper)
 (require 'bv-list)
+(require 'bv-transient)
 
 (ert-deftest bv-list-arguments-match-br-interface ()
   (with-temp-buffer
@@ -287,6 +288,27 @@
   (should (eq (lookup-key bv-list-mode-map (kbd "/")) #'bv-list-search))
   (should (eq (lookup-key bv-list-mode-map (kbd "c")) #'bv-create))
   (should (eq (lookup-key bv-list-mode-map (kbd "RET")) #'bv-list-show)))
+
+(ert-deftest bv-list-direct-bindings-are-documented-in-command-menu ()
+  (dolist (binding '(("RET" . bv-list-show)
+                     ("g" . bv-list-refresh)
+                     ("a" . bv-list-all)
+                     ("o" . bv-list-open)
+                     ("O" . bv-list-open)
+                     ("X" . bv-list-closed)
+                     ("r" . bv-list-ready)
+                     ("b" . bv-list-blocked)
+                     ("l" . bv-list-label)
+                     ("/" . bv-list-search)
+                     ("c" . bv-create)
+                     ("C" . bv-claim)
+                     ("e" . bv-update)
+                     ("x" . bv-close)
+                     ("R" . bv-reopen)))
+    (should (eq (plist-get
+                 (nth 2 (transient-get-suffix 'bv-list-menu (car binding)))
+                 :command)
+                (cdr binding)))))
 
 (ert-deftest bv-list-view-commands-switch-the-current-buffer-in-place ()
   (let ((buffer (generate-new-buffer " *bv in-place list*"))
