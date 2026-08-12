@@ -30,6 +30,11 @@
 (declare-function beads-remove-dependency "beads-edit" (&optional id workspace))
 (declare-function beads-menu "beads-transient" ())
 
+(defcustom beads-show-buffer-name "*Beads issue*"
+  "Name of the reusable buffer used to display issue details."
+  :type 'string
+  :group 'beads)
+
 (defvar beads-show-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map special-mode-map)
@@ -248,11 +253,6 @@
        (message "Could not load issue %s: %s" beads-show-id error-data))
      beads-workspace buffer)))
 
-(defun beads-show--buffer-name (id workspace)
-  "Return the detail buffer name for ID in WORKSPACE."
-  (format "*Beads %s: %s*"
-          id (file-name-nondirectory (directory-file-name workspace))))
-
 (defun beads-show--issue-candidates (workspace)
   "Return issue completion candidates from WORKSPACE.
 
@@ -286,9 +286,16 @@ value."
   (when (string-empty-p id)
     (user-error "Issue ID cannot be empty"))
   (let* ((root (beads-workspace-root workspace))
-         (buffer (get-buffer-create (beads-show--buffer-name id root))))
+         (buffer (get-buffer-create beads-show-buffer-name)))
     (with-current-buffer buffer
-      (beads-show-mode)
+      (unless (derived-mode-p 'beads-show-mode)
+        (beads-show-mode))
+      (unless (and (equal beads-show-id id)
+                   (equal beads-workspace root))
+        (setq beads-show-issue nil)
+        (let ((inhibit-read-only t))
+          (erase-buffer)
+          (insert (format "Loading issue %s...\n" id))))
       (setq-local beads-workspace root)
       (setq-local beads-show-id id)
       (beads-watch-workspace #'beads-show-refresh)

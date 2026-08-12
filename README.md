@@ -69,8 +69,9 @@ For the default installed directory:
 The package runs list, detail, and analysis reads asynchronously and preserves
 the selected issue when a view refreshes. Commands are scoped to the workspace
 shown in the buffer, so buffers from different repositories do not share
-results. Visible Beads buffers also watch the workspace JSONL export and
-automatically refresh after debounced external changes.
+results. Issue details use one reusable buffer, replacing its contents when a
+different issue is opened. Visible Beads buffers also watch the workspace JSONL
+export and automatically refresh after debounced external changes.
 
 Issue rows prioritize the type icon, priority, compact state, ID, and title.
 Their creation age stays aligned at the right edge so recent work remains easy
@@ -119,6 +120,7 @@ are:
   inside one.
 - `beads-database-file`: optional database passed to Beads commands.
 - `beads-error-buffer-name`: buffer used for retained command diagnostics.
+- `beads-show-buffer-name`: name of the reusable issue detail buffer.
 - `beads-auto-refresh-on-change`: whether visible Beads buffers watch for
   external JSONL changes.
 - `beads-auto-refresh-delay`: debounce delay before an automatic refresh.

@@ -215,6 +215,44 @@
       (when (buffer-live-p opened-buffer)
         (kill-buffer opened-buffer)))))
 
+(ert-deftest beads-show-reuses-one-buffer-for-different-issues-and-workspaces ()
+  (let ((workspace-one "/tmp/beads-one/")
+        (workspace-two "/tmp/beads-two/")
+        opened-buffers
+        refreshes)
+    (when-let* ((existing (get-buffer beads-show-buffer-name)))
+      (kill-buffer existing))
+    (unwind-protect
+        (cl-letf (((symbol-function 'beads-workspace-root)
+                   (lambda (&optional directory) directory))
+                  ((symbol-function 'beads-show-refresh)
+                   (lambda ()
+                     (push (list beads-show-id beads-workspace) refreshes)))
+                  ((symbol-function 'beads-watch-workspace) #'ignore)
+                  ((symbol-function 'pop-to-buffer)
+                   (lambda (buffer &rest _ignored)
+                     (push buffer opened-buffers))))
+          (let ((first (beads-show "bve-one" workspace-one)))
+            (with-current-buffer first
+              (let ((inhibit-read-only t))
+                (erase-buffer)
+                (insert "First issue details")))
+            (let ((second (beads-show "bve-two" workspace-two)))
+              (should (eq first second))
+              (should (equal (buffer-name second) beads-show-buffer-name))
+              (should (equal opened-buffers (list second first)))
+              (should (equal refreshes
+                             `(("bve-two" ,workspace-two)
+                               ("bve-one" ,workspace-one))))
+              (with-current-buffer second
+                (should (equal beads-show-id "bve-two"))
+                (should (equal beads-workspace workspace-two))
+                (should-not beads-show-issue)
+                (should (equal (buffer-string)
+                               "Loading issue bve-two...\n"))))))
+      (when-let* ((buffer (get-buffer beads-show-buffer-name)))
+        (kill-buffer buffer)))))
+
 (provide 'beads-show-test)
 
 ;;; beads-show-test.el ends here
