@@ -301,15 +301,17 @@ This wrapper makes the renderer convenient to exercise independently."
          (width (max 24 (beads-list--display-width)))
          (fixed-prefix (concat "  " icon " " priority " " status " "))
          (minimum-title-width 8)
-         (id-budget (max 8 (- width (string-width fixed-prefix)
+         (id-budget (max 0 (- width (string-width fixed-prefix)
                               age-width minimum-title-width 2)))
          (visible-id (beads-list--truncate issue-id id-budget))
          (prefix (concat fixed-prefix visible-id " "))
          (title-width (max 0 (- width (string-width prefix) age-width 1)))
-         (visible-title (beads-list--truncate title title-width)))
+         (visible-title (beads-list--truncate title title-width))
+         (age-padding
+          (max 1 (- width (string-width prefix) (string-width visible-title)
+                   age-width))))
     (insert prefix visible-title)
-    (insert (propertize " " 'display
-                        `(space :align-to (- right-fringe ,age-width))))
+    (insert (make-string age-padding ?\s))
     (insert (format (format "%%%ds" age-width) age) "\n")
     (add-text-properties
      beg (point)

@@ -161,13 +161,22 @@
       (should-not (string-match-p "age does" (buffer-string)))
       (search-forward "6m ago")
       (should (eq (get-text-property (1- (point)) 'face) 'beads-muted-face))
-      (let* ((change (previous-single-property-change
-                      (match-beginning 0) 'display nil
-                      (line-beginning-position)))
-             (alignment (and change
-                             (get-text-property (1- change) 'display))))
-        (should (equal alignment
-                       '(space :align-to (- right-fringe 8))))))))
+      (should-not (get-text-property (1- (point)) 'display)))))
+
+(ert-deftest beads-list-responsive-row-keeps-age-visible-in-narrow-window ()
+  (with-temp-buffer
+    (beads-list-mode)
+    (let ((columns
+           (vector "✨" "P1" "DONE" "bve-long-identifier"
+                   "A title that must be truncated" "5d ago")))
+      (cl-letf (((symbol-function 'beads-list--display-width) (lambda () 40)))
+        (beads-list--print-entry "bve-long-identifier" columns))
+      (should (string-match-p "5d ago" (buffer-string)))
+      (goto-char (point-min))
+      (should (<= (string-width
+                   (buffer-substring (line-beginning-position)
+                                     (line-end-position)))
+                  40)))))
 
 (ert-deftest beads-list-window-resize-rerenders-without-losing-selection ()
   (with-temp-buffer
