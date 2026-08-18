@@ -176,7 +176,7 @@
       (should (<= (string-width
                    (buffer-substring (line-beginning-position)
                                      (line-end-position)))
-                  40)))))
+                  39)))))
 
 (ert-deftest beads-list-window-resize-rerenders-without-losing-selection ()
   (with-temp-buffer

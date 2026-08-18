@@ -281,6 +281,13 @@ This wrapper makes the renderer convenient to exercise independently."
       (window-body-width window)
     80))
 
+(defun beads-list--content-width ()
+  "Return list content width with a safety column at the right edge.
+
+The safety column keeps end-of-line markers and window dividers from
+overwriting the final visible character."
+  (max 24 (1- (beads-list--display-width))))
+
 (defun beads-list--truncate (text width)
   "Truncate TEXT to display WIDTH with an ellipsis."
   (if (<= width 0)
@@ -298,7 +305,7 @@ This wrapper makes the renderer convenient to exercise independently."
          (title (aref columns 4))
          (age (aref columns 5))
          (age-width 8)
-         (width (max 24 (beads-list--display-width)))
+         (width (beads-list--content-width))
          (fixed-prefix (concat "  " icon " " priority " " status " "))
          (minimum-title-width 8)
          (id-budget (max 0 (- width (string-width fixed-prefix)
@@ -386,12 +393,14 @@ This wrapper makes the renderer convenient to exercise independently."
 
 (defun beads-list--header-line ()
   "Return a responsive header for the current issue list."
-  (list (format "%s — %s issue%s    TYPE PRI STATUS ID TITLE"
-                (beads-list--view-title)
-                (length beads-list-issues)
-                (if (= (length beads-list-issues) 1) "" "s"))
-        (propertize " " 'display '(space :align-to (- right-fringe 3)))
-        "AGE"))
+  (let* ((heading (format "%s — %s issue%s    TYPE PRI STATUS ID TITLE"
+                         (beads-list--view-title)
+                         (length beads-list-issues)
+                         (if (= (length beads-list-issues) 1) "" "s")))
+         (age-width 3)
+         (padding (max 1 (- (beads-list--content-width)
+                            (string-width heading) age-width))))
+    (list heading (make-string padding ?\s) "AGE")))
 
 (defun beads-list--args ()
   "Return the `br' arguments for the current list view."
