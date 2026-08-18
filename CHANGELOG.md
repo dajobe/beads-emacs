@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-18
+
 ### Changed
 
 - Renamed the Emacs package, features, modules, commands, customization group,
@@ -16,6 +18,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed narrow list rows so relative creation ages remain visible in
+  horizontally split Emacs windows.
 - Required `br` and `bv` executable names to resolve through `exec-path` instead
   of accepting absolute or relative paths.
 - Made the help popup context-sensitive and kept it aligned with every direct
