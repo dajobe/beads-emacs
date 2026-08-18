@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-18
+
+### Fixed
+
+- Reserved a safety column so end-of-line markers and window dividers do not
+  overwrite the final relative-age character in list rows.
+
 ## [0.1.1] - 2026-08-18
 
 ### Changed

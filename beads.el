@@ -4,7 +4,7 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Author: Dave Beckett <dave@dajobe.org>
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Package-Requires: ((emacs "29.1") (transient "0.3.7"))
 ;; Keywords: tools, project
 ;; URL: https://github.com/dajobe/beads-emacs
