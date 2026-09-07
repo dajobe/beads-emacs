@@ -95,6 +95,8 @@
 (define-key beads-list-mode-map (kbd "o") #'beads-list-open)
 (define-key beads-list-mode-map (kbd "O") #'beads-list-open)
 (define-key beads-list-mode-map (kbd "X") #'beads-list-closed)
+(define-key beads-list-mode-map (kbd "i") #'beads-list-in-progress)
+(define-key beads-list-mode-map (kbd "p") #'beads-list-in-progress)
 (define-key beads-list-mode-map (kbd "r") #'beads-list-ready)
 (define-key beads-list-mode-map (kbd "b") #'beads-list-blocked)
 (define-key beads-list-mode-map (kbd "l") #'beads-list-label)
@@ -114,6 +116,7 @@
     "---"
     ["All issues" beads-list-all t]
     ["Open issues" beads-list-open t]
+    ["In-progress issues" beads-list-in-progress t]
     ["Closed issues" beads-list-closed t]
     ["Ready issues" beads-list-ready t]
     ["Blocked issues" beads-list-blocked t]
@@ -342,10 +345,28 @@ overwriting the final visible character."
             #'beads-list--window-size-change nil t)
   (tabulated-list-init-header))
 
+(defun beads-list--status-rank (label)
+  "Return the sort rank of compact status LABEL, most active first."
+  (pcase label
+    ("PROG" 0)
+    ("OPEN" 1)
+    ("BLKD" 2)
+    ("DONE" 4)
+    (_ 3)))
+
 (defun beads-list--sort-priority (a b)
-  "Return non-nil when entry A has a lower priority number than B."
-  (< (string-to-number (string-remove-prefix "P" (aref (cadr a) 1)))
-     (string-to-number (string-remove-prefix "P" (aref (cadr b) 1)))))
+  "Return non-nil when entry A sorts before entry B.
+
+Entries order by ascending priority number and, within a priority, by
+status activity so in-progress work appears above open work."
+  (let ((priority-a (string-to-number
+                     (string-remove-prefix "P" (aref (cadr a) 1))))
+        (priority-b (string-to-number
+                     (string-remove-prefix "P" (aref (cadr b) 1)))))
+    (if (= priority-a priority-b)
+        (< (beads-list--status-rank (aref (cadr a) 2))
+           (beads-list--status-rank (aref (cadr b) 2)))
+      (< priority-a priority-b))))
 
 (defun beads-list--window-size-change (window)
   "Redisplay list rows after a width change in WINDOW."
@@ -384,6 +405,7 @@ overwriting the final visible character."
   (pcase beads-list-kind
     ('all "All")
     ('open "Open")
+    ('in-progress "In progress")
     ('closed "Closed")
     ('ready "Ready")
     ('blocked "Blocked")
@@ -406,7 +428,10 @@ overwriting the final visible character."
   "Return the `br' arguments for the current list view."
   (pcase beads-list-kind
     ('all '("list" "--all" "--json"))
-    ('open '("list" "--status" "open" "--json"))
+    ;; Like bv's "open" filter, the open view shows every non-closed
+    ;; status: br's default excludes closed and --deferred adds deferred.
+    ('open '("list" "--deferred" "--json"))
+    ('in-progress '("list" "--status" "in_progress" "--json"))
     ('closed '("list" "--status" "closed" "--json"))
     ('ready '("ready" "--json"))
     ('blocked '("blocked" "--json"))
@@ -543,6 +568,15 @@ overwriting the final visible character."
   "Show open Beads issues in DIRECTORY."
   (interactive)
   (beads-list--visit 'open directory))
+
+;;;###autoload
+(defun beads-list-in-progress (&optional directory)
+  "Show in-progress Beads issues in DIRECTORY."
+  (interactive)
+  (beads-list--visit 'in-progress directory))
+
+;;;###autoload
+(defalias 'beads-in-progress #'beads-list-in-progress)
 
 ;;;###autoload
 (defun beads-list-closed (&optional directory)

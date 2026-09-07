@@ -79,35 +79,42 @@ to spot without requiring rigid, wide columns.
 
 ## Main commands
 
-| Command                  | Purpose                                    |
-|:-------------------------|:-------------------------------------------|
-| `M-x beads`              | List open issues                           |
-| `M-x bv`                 | Alias for `M-x beads`                      |
-| `M-x beads-list-open`    | List open issues                           |
-| `M-x beads-list-closed`  | List closed issues                         |
-| `M-x beads-list-ready`   | List issues with no blockers               |
-| `M-x beads-list-blocked` | List blocked issues                        |
-| `M-x beads-list-label`   | Filter issues by label                     |
-| `M-x beads-list-search`  | Search issues in the current workspace     |
-| `M-x beads-show`         | Open an issue by ID                        |
-| `M-x beads-triage`       | Show graph-aware triage recommendations    |
-| `M-x beads-next`         | Show the single top recommendation         |
-| `M-x beads-plan`         | Show parallel dependency-aware work tracks |
-| `M-x beads-check`        | Check the workspace and tool versions      |
-| `M-x beads-menu`         | Open the discoverable command menu         |
+| Command                      | Purpose                                    |
+|:-----------------------------|:-------------------------------------------|
+| `M-x beads`                  | List open (non-closed) issues              |
+| `M-x bv`                     | Alias for `M-x beads`                      |
+| `M-x beads-list-open`        | List open (non-closed) issues              |
+| `M-x beads-list-in-progress` | List in-progress issues                    |
+| `M-x beads-list-closed`      | List closed issues                         |
+| `M-x beads-list-ready`       | List issues with no blockers               |
+| `M-x beads-list-blocked`     | List blocked issues                        |
+| `M-x beads-list-label`       | Filter issues by label                     |
+| `M-x beads-list-search`      | Search issues in the current workspace     |
+| `M-x beads-show`             | Open an issue by ID                        |
+| `M-x beads-triage`           | Show graph-aware triage recommendations    |
+| `M-x beads-next`             | Show the single top recommendation         |
+| `M-x beads-plan`             | Show parallel dependency-aware work tracks |
+| `M-x beads-check`            | Check the workspace and tool versions      |
+| `M-x beads-menu`             | Open the discoverable command menu         |
 
-The shorter `beads-ready`, `beads-blocked`, and `beads-search` commands are
-aliases for their corresponding `beads-list-*` commands. `beads-transient` is an
-alias for `beads-menu`. The `?` popup adapts to list, issue-detail, and analysis
-buffers so its current-buffer section documents the bindings that work there.
+The shorter `beads-ready`, `beads-blocked`, `beads-in-progress`, and
+`beads-search` commands are aliases for their corresponding `beads-list-*`
+commands. `beads-transient` is an alias for `beads-menu`. The `?` popup adapts
+to list, issue-detail, and analysis buffers so its current-buffer section
+documents the bindings that work there.
 
 List and detail buffers display their available bindings through `C-h m`. Common
 navigation follows normal Emacs conventions: `RET` visits the issue at point,
 `g` refreshes the current view, and `q` quits the window. In a list buffer, `a`,
-`O`, `X`, `r`, and `b` switch the same buffer to All, Open, Closed, Ready, and
-Blocked respectively. Lowercase `o` is also an Open alias, `c` creates an issue,
-`l` filters by label, and `/` searches in place. The popup and direct list
-bindings use the same `O`, `X`, and `c` shortcuts.
+`O`, `i`, `X`, `r`, and `b` switch the same buffer to All, Open, In progress,
+Closed, Ready, and Blocked respectively. Lowercase `o` is also an Open alias and
+`p` an In-progress alias, `c` creates an issue, `l` filters by label, and `/`
+searches in place. The popup and direct list bindings use the same `O`, `i`,
+`X`, and `c` shortcuts.
+
+The Open view matches the `bv` viewer's open filter: it shows every non-closed
+issue, including in-progress, blocked, and deferred work. Within the same
+priority, rows sort by activity so in-progress issues appear above open ones.
 
 ## Customization
 

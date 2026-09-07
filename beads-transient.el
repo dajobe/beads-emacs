@@ -27,6 +27,7 @@
                            ("a" "All issues" beads-list-all)
                            ("O" "Open" beads-list-open)
                            ("o" "Open alias" beads-list-open)
+                           ("i" "In progress" beads-list-in-progress)
                            ("X" "Closed" beads-list-closed)
                            ("r" "Ready" beads-list-ready)
                            ("b" "Blocked" beads-list-blocked)
@@ -71,6 +72,7 @@
                           ["Browse"
                            ("a" "All issues" beads-list-all)
                            ("O" "Open" beads-list-open)
+                           ("i" "In progress" beads-list-in-progress)
                            ("X" "Closed" beads-list-closed)
                            ("r" "Ready" beads-list-ready)
                            ("b" "Blocked" beads-list-blocked)
@@ -95,6 +97,7 @@
                           ["Browse"
                            ("a" "All issues" beads-list-all)
                            ("O" "Open" beads-list-open)
+                           ("i" "In progress" beads-list-in-progress)
                            ("X" "Closed" beads-list-closed)
                            ("r" "Ready" beads-list-ready)
                            ("b" "Blocked" beads-list-blocked)
@@ -121,6 +124,7 @@
                          [["Browse"
                            ("a" "All issues" beads-list-all)
                            ("O" "Open" beads-list-open)
+                           ("i" "In progress" beads-list-in-progress)
                            ("X" "Closed" beads-list-closed)
                            ("r" "Ready" beads-list-ready)
                            ("b" "Blocked" beads-list-blocked)
