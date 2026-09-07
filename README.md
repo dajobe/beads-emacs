@@ -61,7 +61,7 @@ For the default installed directory:
 ## Getting started
 
 1. Visit any file inside a repository containing `.beads` or `_beads`.
-2. Run `M-x beads` to open the main issue list. `M-x bv` is a shorter alias.
+2. Run `M-x beads` to open the list of open issues. `M-x bv` is a shorter alias.
 3. Press `RET` on an issue to open its detail buffer.
 4. Press `?` or run `M-x beads-menu` for the menu of lists, analysis, and
    mutations.
@@ -81,7 +81,7 @@ to spot without requiring rigid, wide columns.
 
 | Command                  | Purpose                                    |
 |:-------------------------|:-------------------------------------------|
-| `M-x beads`              | Open the main issue list                   |
+| `M-x beads`              | List open issues                           |
 | `M-x bv`                 | Alias for `M-x beads`                      |
 | `M-x beads-list-open`    | List open issues                           |
 | `M-x beads-list-closed`  | List closed issues                         |

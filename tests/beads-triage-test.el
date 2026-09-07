@@ -15,10 +15,8 @@
                      ("n" . forward-button)
                      ("N" . backward-button)
                      ("RET" . push-button)))
-    (should (eq (plist-get
-                 (nth 2 (transient-get-suffix 'beads-triage-menu (car binding)))
-                 :command)
-                (cdr binding)))))
+    (should (beads-test-transient-key-invokes-command-p
+             'beads-triage-menu (car binding) (cdr binding)))))
 
 (defconst beads-triage-test--brief-json
   (concat

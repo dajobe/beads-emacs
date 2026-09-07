@@ -4,7 +4,7 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Author: Dave Beckett <dave@dajobe.org>
-;; Version: 0.1.2
+;; Version: 0.1.3
 ;; Package-Requires: ((emacs "29.1") (transient "0.3.7"))
 ;; Keywords: tools, project
 ;; URL: https://github.com/dajobe/beads-emacs
@@ -52,15 +52,15 @@
 
 ;;;###autoload
 (defun beads (&optional directory)
-  "Open the Beads issue list for DIRECTORY.
+  "Open the list of open Beads issues for DIRECTORY.
 
 When called with a prefix argument, prompt for DIRECTORY."
   (interactive
    (list (when current-prefix-arg
            (read-directory-name "Beads workspace: " nil nil t))))
-  (beads-list directory))
+  (beads-list-open directory))
 
-;;;###autoload (autoload 'bv "beads" "Open the Beads issue list." t)
+;;;###autoload (autoload 'bv "beads" "Open the list of open Beads issues." t)
 ;; This intentionally short entry point matches the companion executable.
 (fset 'bv #'beads)
 

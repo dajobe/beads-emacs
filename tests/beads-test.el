@@ -9,6 +9,15 @@
 (ert-deftest beads-short-command-is-an-alias ()
   (should (eq (symbol-function 'bv) 'beads)))
 
+(ert-deftest beads-opens-the-open-issue-list ()
+  (let (opened-directory)
+    (cl-letf (((symbol-function 'beads-list-open)
+               (lambda (directory)
+                 (setq opened-directory directory)
+                 'open-list)))
+      (should (eq (beads "/tmp/project/") 'open-list))
+      (should (equal opened-directory "/tmp/project/")))))
+
 (ert-deftest beads-menu-selects-the-current-buffer-menu ()
   (let (selected)
     (cl-letf (((symbol-function 'beads-list-menu)

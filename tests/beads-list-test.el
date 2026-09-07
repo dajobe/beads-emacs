@@ -314,10 +314,8 @@
                      ("e" . beads-update)
                      ("x" . beads-close)
                      ("R" . beads-reopen)))
-    (should (eq (plist-get
-                 (nth 2 (transient-get-suffix 'beads-list-menu (car binding)))
-                 :command)
-                (cdr binding)))))
+    (should (beads-test-transient-key-invokes-command-p
+             'beads-list-menu (car binding) (cdr binding)))))
 
 (ert-deftest beads-list-view-commands-switch-the-current-buffer-in-place ()
   (let ((buffer (generate-new-buffer " *bv in-place list*"))

@@ -8,6 +8,18 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-09-06
+
+### Changed
+
+- Changed `M-x beads` and its `M-x bv` alias to initially list only open issues.
+- Ignored local `br` WAL certificate and fsqlite migration state files.
+
+### Fixed
+
+- Fixed menu-binding regression tests across older Transient releases and the
+  representation bundled with Emacs 31.
+
 ## [0.1.2] - 2026-08-18
 
 ### Fixed

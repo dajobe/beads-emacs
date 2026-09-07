@@ -19,10 +19,8 @@
                      ("l r" . beads-remove-label)
                      ("D a" . beads-add-dependency)
                      ("D r" . beads-remove-dependency)))
-    (should (eq (plist-get
-                 (nth 2 (transient-get-suffix 'beads-show-menu (car binding)))
-                 :command)
-                (cdr binding)))))
+    (should (beads-test-transient-key-invokes-command-p
+             'beads-show-menu (car binding) (cdr binding)))))
 
 (defconst beads-show-test--issue-json
   (concat

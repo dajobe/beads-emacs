@@ -62,10 +62,10 @@ repositories never share stale data.
 
 ## User interface
 
-`M-x beads` opens the main issue list. It derives from `tabulated-list-mode`,
-preserves the selected issue across refreshes, and initially shows priority,
-status, type, ID, title, and assignee. Ready, blocked, all, and search views use
-the same renderer.
+`M-x beads` opens the list of open issues. It derives from
+`tabulated-list-mode`, preserves the selected issue across refreshes, and shows
+priority, status, type, ID, title, and assignee. Ready, blocked, all, and search
+views use the same renderer.
 
 `RET` opens an issue detail buffer derived from `special-mode`. Dependencies and
 issue identifiers are buttons. Analysis commands use read-only `special-mode`

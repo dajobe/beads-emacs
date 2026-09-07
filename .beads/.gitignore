@@ -3,8 +3,10 @@
 *.db-journal
 *.db-shm
 *.db-wal
+*.db-wal-cert*
 # fsqlite multi-process namespace sidecars (-fsqlite-ns-gate / -fsqlite-ns-use)
 *.db-fsqlite-*
+*.fsqlite-migration-state
 
 # Lock files
 .write.lock

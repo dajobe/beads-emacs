@@ -25,6 +25,15 @@
   "Decode JSON TEXT through the package boundary."
   (beads-json-decode text))
 
+(defun beads-test-transient-key-invokes-command-p (prefix key command)
+  "Return non-nil when KEY invokes COMMAND in transient PREFIX."
+  (let ((suffix (transient-get-suffix prefix key)))
+    (eq (plist-get (if (eq (car-safe suffix) 'transient-suffix)
+                       (cdr suffix)
+                     (nth 2 suffix))
+                   :command)
+        command)))
+
 (provide 'test-helper)
 
 ;;; test-helper.el ends here
