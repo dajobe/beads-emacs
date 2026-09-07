@@ -8,6 +8,23 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-09-07
+
+### Added
+
+- Added an in-progress list view (`beads-list-in-progress`, alias
+  `beads-in-progress`) bound to `i` and `p` in list buffers and to `i` in the
+  command menus.
+- Added the `beads-version` constant and matching interactive command, and
+  included the package version in the `beads-check` report.
+
+### Changed
+
+- Changed the Open list view to show every non-closed issue (in-progress,
+  blocked, and deferred included), matching the `bv` viewer's open filter.
+- Sorted same-priority list rows by status activity so in-progress issues appear
+  above open ones.
+
 ## [0.1.3] - 2026-09-06
 
 ### Changed

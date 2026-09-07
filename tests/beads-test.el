@@ -5,6 +5,7 @@
 
 (require 'test-helper)
 (require 'beads-transient)
+(require 'lisp-mnt)
 
 (ert-deftest beads-short-command-is-an-alias ()
   (should (eq (symbol-function 'bv) 'beads)))
@@ -37,6 +38,15 @@
           (funcall (car case))
           (beads-menu)
           (should (eq selected (cdr case))))))))
+
+(ert-deftest beads-version-matches-the-package-header ()
+  (should (string-match-p "\\`[0-9]+\\.[0-9]+\\.[0-9]+\\'" beads-version))
+  (should (equal (beads-version) beads-version))
+  (let ((library (locate-library "beads.el" t)))
+    (should library)
+    (with-temp-buffer
+      (insert-file-contents library)
+      (should (equal (lm-header "version") beads-version)))))
 
 (ert-deftest beads-version-string-uses-version-argv-and-trims-output ()
   (let (captured)
@@ -92,12 +102,15 @@
                (should (string-match-p "Beads environment" text))
                (should (string-match-p
                         (regexp-quote
-                         (concat "Workspace: "
+                         (concat "Workspace:   "
                                  (file-name-as-directory
                                   (file-truename root))))
                         text))
-               (should (string-match-p "br:        custom-br 1.0" text))
-               (should (string-match-p "bv:        custom-bv 1.0" text))))
+               (should (string-match-p
+                        (regexp-quote (concat "beads-emacs: " beads-version))
+                        text))
+               (should (string-match-p "br:          custom-br 1.0" text))
+               (should (string-match-p "bv:          custom-bv 1.0" text))))
            (should (equal (mapcar #'car (nreverse calls))
                           '("custom-br" "custom-bv")))
            (should (seq-every-p

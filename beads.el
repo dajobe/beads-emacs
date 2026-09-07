@@ -4,7 +4,7 @@
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Author: Dave Beckett <dave@dajobe.org>
-;; Version: 0.1.3
+;; Version: 0.1.4
 ;; Package-Requires: ((emacs "29.1") (transient "0.3.7"))
 ;; Keywords: tools, project
 ;; URL: https://github.com/dajobe/beads-emacs
@@ -23,6 +23,19 @@
 (require 'beads-triage)
 (require 'beads-edit)
 (require 'beads-transient)
+
+(defconst beads-version "0.1.4"
+  "Version of the beads-emacs package.
+
+Keep this in sync with the Version header in beads.el.")
+
+;;;###autoload
+(defun beads-version ()
+  "Return the beads-emacs package version, displaying it when interactive."
+  (interactive)
+  (when (called-interactively-p 'interactive)
+    (message "beads-emacs %s" beads-version))
+  beads-version)
 
 (defun beads--version-string (executable)
   "Return version output from EXECUTABLE, or signal a user error."
@@ -46,9 +59,10 @@
          (viewer-version (beads--version-string beads-bv-executable)))
     (with-help-window "*Beads check*"
       (princ "Beads environment\n\n")
-      (princ (format "Workspace: %s\n" workspace))
-      (princ (format "br:        %s\n" br-version))
-      (princ (format "bv:        %s\n" viewer-version)))))
+      (princ (format "Workspace:   %s\n" workspace))
+      (princ (format "beads-emacs: %s\n" beads-version))
+      (princ (format "br:          %s\n" br-version))
+      (princ (format "bv:          %s\n" viewer-version)))))
 
 ;;;###autoload
 (defun beads (&optional directory)
