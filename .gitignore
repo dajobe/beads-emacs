@@ -4,3 +4,5 @@
 .DS_Store
 /beads-autoloads.el
 /.packages/
+# br doctor per-run artifacts
+.doctor/
