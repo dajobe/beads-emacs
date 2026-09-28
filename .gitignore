@@ -6,3 +6,7 @@
 /.packages/
 # br doctor per-run artifacts
 .doctor/
+
+# bv (beads viewer): configuration in .bv/ is tracked; ignore its semantic
+# search index cache
+/.bv/semantic/
